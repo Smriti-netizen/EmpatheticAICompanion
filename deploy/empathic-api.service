@@ -1,0 +1,15 @@
+[Unit]
+Description=Empathic Companion API
+After=network.target ollama.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/empathic-companion/backend
+Environment=PATH=/opt/empathic-companion/backend/.venv/bin
+ExecStart=/opt/empathic-companion/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

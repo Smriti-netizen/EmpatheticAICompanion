@@ -1,0 +1,10 @@
+fastapi>=0.115.6
+uvicorn[standard]>=0.32.1
+httpx>=0.28.1
+pydantic>=2.11.0
+pydantic-settings>=2.7.0
+sqlalchemy>=2.0.36
+python-multipart>=0.0.17
+aiofiles>=24.1.0
+tzdata>=2024.1
+# Optional for P4 voice (heavy): faster-whisper>=1.1.0

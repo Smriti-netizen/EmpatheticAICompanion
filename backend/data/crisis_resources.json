@@ -1,0 +1,8 @@
+{
+  "helplines": [
+    {"name": "Tele-MANAS", "phone": "14416"},
+    {"name": "iCall", "phone": "9152987821"},
+    {"name": "Emergency", "phone": "112"}
+  ],
+  "message": "If you are in immediate danger, call 112 now."
+}
