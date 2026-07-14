@@ -7,4 +7,6 @@ sqlalchemy>=2.0.36
 python-multipart>=0.0.17
 aiofiles>=24.1.0
 tzdata>=2024.1
-# Optional for P4 voice (heavy): faster-whisper>=1.1.0
+# P4 voice
+faster-whisper>=1.1.0
+edge-tts>=6.1.0

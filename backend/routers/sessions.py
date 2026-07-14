@@ -48,7 +48,10 @@ def create_practice_session(body: PracticeSessionRequest, db: Session = Depends(
 @router.post("/{session_id}/start")
 async def start(session_id: str, db: Session = Depends(get_db)):
     try:
-        return await start_session(db, session_id)
+        from services.voice_audio import attach_tts
+
+        payload = await start_session(db, session_id)
+        return await attach_tts(payload, payload.get("opening_message"))
     except SessionServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
@@ -80,7 +83,10 @@ def get_session(session_id: str, db: Session = Depends(get_db)):
 @router.post("/{session_id}/chat")
 async def session_chat(session_id: str, body: ChatTurnRequest, db: Session = Depends(get_db)):
     try:
-        return await chat_turn(db, session_id, body.content)
+        from services.voice_audio import attach_tts
+
+        result = await chat_turn(db, session_id, body.content)
+        return await attach_tts(result, result.get("reply"))
     except SessionServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 

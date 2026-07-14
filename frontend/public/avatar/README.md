@@ -1,2 +1,6 @@
-# Placeholder — replace with counselor.riv for P5.
-# AvatarStage currently uses an SVG fallback with the same props interface.
+# Avatar assets (P5)
+
+SVG counselors (Hop / Aura / Spark) ship in-app with blink, breathing, and lip motion.
+
+Optional Rive upgrade: place `counselor.riv` here and wire `RiveCounselor` when ready.
+Until then, `CounselorAvatar.tsx` is the production avatar.

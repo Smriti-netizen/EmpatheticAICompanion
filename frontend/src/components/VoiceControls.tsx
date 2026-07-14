@@ -124,8 +124,8 @@ export function VoiceControls({
 
       <p className="text-[11px] text-white/45">
         {serverVoiceReady
-          ? "Server voice (Whisper + Piper) enabled."
-          : "Using browser mic + speech for now. Server Whisper installs in P4 on Oracle."}
+          ? "Server voice (Whisper + Piper/edge-tts) enabled."
+          : "Browser mic fallback. Run scripts/setup_voice.ps1 for Whisper."}
       </p>
 
       {micError && <p className="text-xs text-[#f0b4ae]">{micError}</p>}

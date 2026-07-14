@@ -6,7 +6,8 @@
 |--------|----------|
 | Intake | Chat questionnaire (PHQ-9 / GAD-7 in conversation) |
 | Avatars | Original presets **Hop / Aura / Spark** (no third-party IP) |
-| Session | Video-call room, free speech via silence turns, End call |
+| Session | Video-call room + End call |
+| Voice | **Silero VAD → Whisper STT → Piper/edge-tts** (browser fallback if Whisper offline) |
 | Camera | Optional PiP + on-device motion cues (no upload) |
 | Type fallback | Hidden “Type instead” only |
 
@@ -15,20 +16,30 @@
 | Phase | Status |
 |-------|--------|
 | P0–P3 core APIs | **PASS** (`scripts/e2e_api_flow.py`) |
-| Chat intake script | **PASS** (`frontend/scripts/check_intake.ts`) |
-| Avatar picker | **PASS** (build) |
-| Free-speech call room | **BUILT** — verify mic in Chrome on localhost |
-| Browser speech | Depends on Chrome/Edge + mic permission |
+| Chat intake / onboarding | **PASS** |
+| Avatar picker | **PASS** |
+| **P4 Voice** | **INTEGRATED** — CallRoom → VAD + `/sessions/{id}/voice`; TTS via Piper or edge-tts; run `scripts/setup_voice.ps1` |
+| **P5 Avatar life** | **PASS** — blink, breath, speaking mouth; Rive optional later |
+| **P6 Memory / openings** | **PASS** — personalized `Hi {name}` openings + chart memory |
+| **P7 Oracle deploy** | **SCRIPTS READY** — `deploy/oracle-setup.sh` + systemd/nginx |
 
-## Conversational onboarding (CV-style)
+## Voice architecture
 
-UI-only redesign of `/intake`:
-- Always-on chat composer (GPT-style)
-- Typing indicator + varied acknowledgements
-- Option chips collapse to selected user bubble
-- Resume after refresh via `localStorage`
-- Same `saveIntake` / `saveScreening` payloads
+1. Client: `@ricky0123/vad-web` (Silero) detects end of speech  
+2. Client encodes 16 kHz WAV → `POST /api/v1/sessions/{id}/voice`  
+3. Server: faster-whisper → counselor LLM → Piper **or** edge-tts → `audio_base64`  
+4. Client: `playBase64Audio` (browser TTS only if no audio)  
 
+Fallback when `health.whisper != ready`: previous browser SpeechRecognition loop.
+
+## Setup voice locally
+
+```powershell
+cd C:\Users\smrit\OneDrive\empathaticaicompanion
+.\scripts\setup_voice.ps1
+# restart uvicorn, then:
+# Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
+```
 
 ## Test commands
 

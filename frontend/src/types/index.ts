@@ -30,12 +30,23 @@ export interface SessionChatResponse {
   crisis: boolean;
   expression: string;
   remaining_sec: number;
+  audio_base64?: string | null;
+  audio_mime?: string;
 }
 
 export interface SessionVoiceResponse extends SessionChatResponse {
   transcript: string;
   audio_base64: string | null;
   audio_mime: string;
+}
+
+export interface SessionStartResponse {
+  session_id: string;
+  opening_message: string;
+  duration_target_sec: number;
+  clinical_context_loaded?: boolean;
+  audio_base64?: string | null;
+  audio_mime?: string;
 }
 
 export interface CloseSessionResponse {

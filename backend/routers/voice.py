@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from db.session import get_db
-from services import stt_whisper, tts_piper
+from services import stt_whisper
 from services.session_service import SessionServiceError, chat_turn
+from services.voice_audio import attach_tts
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["voice"])
 
@@ -21,10 +22,10 @@ async def session_voice(
     if stt_whisper.ensure_ready() != "ready":
         raise HTTPException(
             status_code=501,
-            detail="Voice STT not available. Install faster-whisper to enable.",
+            detail="Voice STT not available. Install faster-whisper (see scripts/setup_voice.ps1).",
         )
 
-    suffix = Path(audio.filename or "audio.webm").suffix or ".webm"
+    suffix = Path(audio.filename or "audio.wav").suffix or ".wav"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await audio.read())
         tmp_path = Path(tmp.name)
@@ -53,12 +54,4 @@ async def session_voice(
         "audio_base64": None,
         "audio_mime": "audio/wav",
     }
-
-    if not result["crisis"] and tts_piper.status() == "ready":
-        try:
-            wav = tts_piper.synthesize(result["reply"])
-            payload["audio_base64"] = base64.b64encode(wav).decode("ascii")
-        except Exception:
-            payload["audio_base64"] = None
-
-    return payload
+    return await attach_tts(payload, result["reply"])

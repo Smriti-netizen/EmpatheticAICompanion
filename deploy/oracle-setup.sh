@@ -1,23 +1,55 @@
-# Oracle A1 bootstrap (P7)
-
-```bash
-# Run on Ubuntu 22.04 aarch64 VM after cloning the repo
+#!/usr/bin/env bash
+# Oracle A1 bootstrap (P7) — full stack: Ollama, API, Whisper, TTS, nginx
 set -euo pipefail
 
-curl -fsSL https://ollama.com/install.sh | sh
-# Place GGUF then: ollama create empathic-counselor -f deploy/Modelfile
+REPO_DIR="${REPO_DIR:-/opt/empathic-companion}"
 
+echo "==> System packages"
 sudo apt update
-sudo apt install -y python3.11-venv nginx certbot python3-certbot-nginx
+sudo apt install -y python3.11-venv python3-pip nginx certbot python3-certbot-nginx \
+  ffmpeg curl git build-essential
 
-cd /opt/empathic-companion/backend
+echo "==> Ollama"
+if ! command -v ollama >/dev/null 2>&1; then
+  curl -fsSL https://ollama.com/install.sh | sh
+fi
+# Create model after GGUF/Modelfile present:
+#   ollama create empathic-counselor -f "$REPO_DIR/deploy/Modelfile"
+
+echo "==> Backend venv + deps"
+cd "$REPO_DIR/backend"
 python3 -m venv .venv
+# shellcheck disable=SC1091
 source .venv/bin/activate
+pip install -U pip
 pip install -r requirements.txt
 
-# Configure .env (CORS to Vercel, DB_PATH, OLLAMA_*)
-# systemctl enable --now empathic-api
-# nginx + certbot per deploy/nginx.conf
-```
+echo "==> Voice (Whisper + edge-tts / Piper)"
+bash "$REPO_DIR/scripts/setup_voice.sh"
 
-See `deploy/empathic-api.service` and `deploy/nginx.conf`.
+# Optional: install piper binary for aarch64 if available
+# wget piper release and place on PATH, then set PIPER_MODEL_PATH in .env
+
+echo "==> .env skeleton"
+if [[ ! -f .env ]]; then
+  cat > .env <<EOF
+OLLAMA_HOST=http://127.0.0.1:11434
+OLLAMA_MODEL=empathic-counselor
+WHISPER_MODEL=small
+CORS_ORIGINS=https://YOUR_VERCEL_DOMAIN,http://localhost:5173
+DB_PATH=$REPO_DIR/backend/data/empathic.db
+EOF
+fi
+
+echo "==> systemd"
+sudo cp "$REPO_DIR/deploy/empathic-api.service" /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now empathic-api
+
+echo "==> nginx"
+sudo cp "$REPO_DIR/deploy/nginx.conf" /etc/nginx/sites-available/empathic
+sudo ln -sf /etc/nginx/sites-available/empathic /etc/nginx/sites-enabled/empathic
+sudo nginx -t && sudo systemctl reload nginx
+# sudo certbot --nginx -d api.yourdomain.com
+
+echo "P7 bootstrap complete. Health: curl -s http://127.0.0.1:8000/api/v1/health"

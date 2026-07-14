@@ -12,9 +12,19 @@ Current local Modelfile may `FROM` the Hugging Face Ollama tag instead of a loca
 
 ## Piper voice (P4)
 
-- `en_US-lessac-medium.onnx` (+ JSON)
-- Set `PIPER_MODEL_PATH` in backend `.env`
+- Preferred: `en_US-lessac-medium.onnx` (+ JSON) under `models/`
+- Set `PIPER_MODEL_PATH` in `backend/.env`
+- Install Piper CLI from https://github.com/rhasspy/piper/releases and put `piper` on PATH
+- If Piper is missing, backend uses **edge-tts** (`en-US-JennyNeural`) automatically
 
 ## Whisper (P4)
 
-- Installed via `faster-whisper` when ready (`WHISPER_MODEL=small`)
+- `pip install faster-whisper` (in requirements)
+- `WHISPER_MODEL=small` (CPU int8)
+- Run: `scripts/setup_voice.ps1` (Windows) or `scripts/setup_voice.sh` (Linux)
+
+## Check
+
+```text
+GET /api/v1/health → whisper: ready, tts: ready, tts_engine: piper|edge-tts
+```

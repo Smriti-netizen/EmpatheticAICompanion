@@ -239,9 +239,12 @@ async def close_session(db: Session, session_id: str, mood_end: int | None) -> d
 
 
 async def _opening_message(db: Session, user_id: str) -> str:
-    from db.models import SessionNote
+    from db.models import SessionNote, User
 
+    user = db.get(User, user_id)
     profile = db.get(UserProfile, user_id)
+    name = (user.display_name if user and user.display_name else "").strip()
+    greeting = f"Hi {name}, " if name else "Hi, "
     goal = profile.session_goal if profile and profile.session_goal else None
 
     session_ids = db.scalars(
@@ -259,15 +262,15 @@ async def _opening_message(db: Session, user_id: str) -> str:
         snippet = last_note.summary[:180].rstrip(".")
         homework = (last_note.homework or "that small practice").strip()
         return (
-            f"Good to see you again. Last time we touched on {snippet}. "
+            f"{greeting}good to see you again. Last time we touched on {snippet}. "
             f"How did {homework} go for you?"
         )
     if goal:
         return (
-            f"I'm really glad you made it. You mentioned wanting to work on {goal} — "
+            f"{greeting}I'm really glad you made it. You mentioned wanting to work on {goal} — "
             "where would you like to begin today?"
         )
     return (
-        "I'm glad you're here. Take a breath — whenever you're ready, "
+        f"{greeting}I'm glad you're here. Take a breath — whenever you're ready, "
         "what's been sitting with you?"
     )

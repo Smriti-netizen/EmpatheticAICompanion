@@ -3,6 +3,7 @@ import type {
   Booking,
   CloseSessionResponse,
   SessionChatResponse,
+  SessionStartResponse,
   SessionVoiceResponse,
   Slot,
 } from "../types";
@@ -121,11 +122,9 @@ export const api = {
     }),
 
   startSession: (sessionId: string) =>
-    request<{
-      session_id: string;
-      opening_message: string;
-      duration_target_sec: number;
-    }>(`/api/v1/sessions/${sessionId}/start`, { method: "POST" }),
+    request<SessionStartResponse>(`/api/v1/sessions/${sessionId}/start`, {
+      method: "POST",
+    }),
 
   getSession: (sessionId: string) =>
     request<{
@@ -143,7 +142,8 @@ export const api = {
 
   sessionVoice: (sessionId: string, audio: Blob) => {
     const form = new FormData();
-    form.append("audio", audio, "utterance.webm");
+    const name = audio.type.includes("wav") ? "utterance.wav" : "utterance.webm";
+    form.append("audio", audio, name);
     return request<SessionVoiceResponse>(`/api/v1/sessions/${sessionId}/voice`, {
       method: "POST",
       body: form,
@@ -168,5 +168,7 @@ export const api = {
       model_loaded: boolean;
       whisper: string;
       piper: string;
+      tts?: string;
+      tts_engine?: string;
     }>("/api/v1/health"),
 };

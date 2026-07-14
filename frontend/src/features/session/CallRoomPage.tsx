@@ -6,15 +6,17 @@ import { SessionTimer } from "../../components/SessionTimer";
 import { UserCameraPip } from "../../components/UserCameraPip";
 import { useUserCamera } from "../../hooks/useUserCamera";
 import { getAvatarId } from "../../lib/storage";
-import { speakWithBrowserTts } from "../../lib/audio";
+import { playBase64Audio, speakWithBrowserTts } from "../../lib/audio";
 import type { AvatarExpression, AvatarId } from "../avatar/avatarCatalog";
 import { CounselorAvatar } from "../avatar/CounselorAvatar";
 import { presenceToExpression, usePresenceCues } from "./usePresenceCues";
 import { useFreeSpeechLoop } from "./useFreeSpeechLoop";
+import { useVadVoiceLoop } from "./useVadVoiceLoop";
 
 /**
- * Video-call style therapy room: free speech, avatar reactions, End call.
- * No chat panel / tap-to-talk in the primary UI.
+ * Video-call therapy room.
+ * Primary path (P4): Silero VAD → Whisper STT → counselor → Piper/edge-tts.
+ * Fallback: browser SpeechRecognition + speechSynthesis when Whisper is offline.
  */
 export function CallRoomPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,35 +37,59 @@ export function CallRoomPage() {
   const [showType, setShowType] = useState(false);
   const [draft, setDraft] = useState("");
   const [expression, setExpression] = useState<AvatarExpression>("calm");
+  const [serverVoice, setServerVoice] = useState(false);
+  const [ttsEngine, setTtsEngine] = useState("browser");
 
   const presence = usePresenceCues(camera.videoRef, camera.enabled && listenActive);
   const messagesRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
   const busyRef = useRef(false);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
 
   const stopVoice = useCallback(() => {
     window.speechSynthesis?.cancel();
+    if (audioElRef.current) {
+      audioElRef.current.pause();
+      audioElRef.current = null;
+    }
     setSpeaking(false);
   }, []);
 
-  const playCounselor = useCallback(async (text: string) => {
-    setListenActive(false);
-    setSpeaking(true);
-    setCaption(text);
-    const estMs = Math.min(60000, Math.max(2500, text.split(/\s+/).length * 380));
-    await new Promise<void>((resolve) => {
-      let done = false;
-      const finish = () => {
-        if (done) return;
-        done = true;
-        window.clearTimeout(fallback);
-        resolve();
-      };
-      const fallback = window.setTimeout(finish, estMs);
-      speakWithBrowserTts(text, finish);
-    });
-    setSpeaking(false);
-    setListenActive(true);
-  }, []);
+  const playCounselor = useCallback(
+    async (text: string, audioBase64?: string | null, audioMime = "audio/wav") => {
+      setListenActive(false);
+      setSpeaking(true);
+      setCaption(text);
+      const estMs = Math.min(60000, Math.max(2500, text.split(/\s+/).length * 380));
+
+      await new Promise<void>((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          window.clearTimeout(fallback);
+          resolve();
+        };
+        const fallback = window.setTimeout(finish, estMs);
+
+        if (audioBase64) {
+          void playBase64Audio(audioBase64, audioMime, finish)
+            .then((el) => {
+              audioElRef.current = el;
+            })
+            .catch(() => {
+              speakWithBrowserTts(text, finish);
+            });
+        } else {
+          speakWithBrowserTts(text, finish);
+        }
+      });
+
+      audioElRef.current = null;
+      setSpeaking(false);
+      setListenActive(true);
+    },
+    [],
+  );
 
   const handleUtterance = useCallback(
     async (text: string) => {
@@ -88,7 +114,7 @@ export function CallRoomPage() {
           return;
         }
         setExpression(result.expression as AvatarExpression);
-        await playCounselor(result.reply);
+        await playCounselor(result.reply, result.audio_base64, result.audio_mime);
       } catch (err) {
         setError(err instanceof ApiClientError ? err.message : "Counselor unavailable");
         setListenActive(true);
@@ -100,15 +126,76 @@ export function CallRoomPage() {
     [id, navigate, playCounselor, stopVoice, summary],
   );
 
+  const handleAudio = useCallback(
+    async (blob: Blob) => {
+      if (!id || busyRef.current || summary) return;
+      busyRef.current = true;
+      setBusy(true);
+      setError(null);
+      setListenActive(false);
+      setCaption("Transcribing…");
+      try {
+        const result = await api.sessionVoice(id, blob);
+        setRemaining(result.remaining_sec);
+        messagesRef.current = [
+          ...messagesRef.current,
+          { role: "user", content: result.transcript },
+          { role: "assistant", content: result.reply },
+        ];
+        setCaption(`You: ${result.transcript}`);
+        if (result.crisis) {
+          stopVoice();
+          navigate("/crisis");
+          return;
+        }
+        setExpression(result.expression as AvatarExpression);
+        await playCounselor(result.reply, result.audio_base64, result.audio_mime);
+      } catch (err) {
+        setError(err instanceof ApiClientError ? err.message : "Counselor unavailable");
+        setListenActive(true);
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    },
+    [id, navigate, playCounselor, stopVoice, summary],
+  );
+
+  const canUseServerVoice = serverVoice && listenActive && !summary && !starting;
+  const canUseBrowserSpeech = !serverVoice && listenActive && !summary && !starting;
+
+  const vad = useVadVoiceLoop({
+    active: canUseServerVoice,
+    enabled: serverVoice,
+    onAudio: handleAudio,
+  });
+
   const speech = useFreeSpeechLoop({
-    active: listenActive && !summary && !starting,
+    active: canUseBrowserSpeech,
     onUtterance: handleUtterance,
   });
 
+  const userSpeaking = serverVoice ? vad.userSpeaking : speech.userSpeaking;
+
   useEffect(() => {
-    const next = presenceToExpression(presence, speech.userSpeaking);
+    const next = presenceToExpression(presence, userSpeaking);
     if (!speaking) setExpression(next);
-  }, [presence, speech.userSpeaking, speaking]);
+  }, [presence, userSpeaking, speaking]);
+
+  useEffect(() => {
+    void api
+      .health()
+      .then((h) => {
+        setServerVoice(h.whisper === "ready");
+        setTtsEngine(
+          h.tts === "ready" ? (h.tts_engine || "server") : "browser",
+        );
+      })
+      .catch(() => {
+        setServerVoice(false);
+        setTtsEngine("browser");
+      });
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -122,7 +209,11 @@ export function CallRoomPage() {
           { role: "assistant", content: started.opening_message },
         ];
         setStarting(false);
-        await playCounselor(started.opening_message);
+        await playCounselor(
+          started.opening_message,
+          started.audio_base64,
+          started.audio_mime,
+        );
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof ApiClientError ? err.message : "Could not start");
@@ -169,12 +260,30 @@ export function CallRoomPage() {
     );
   }
 
+  const voiceHint = serverVoice
+    ? busy
+      ? "Counselor is responding…"
+      : listenActive
+        ? userSpeaking
+          ? "Hearing you… pause when finished"
+          : "Listening (Silero VAD + Whisper) — speak naturally"
+        : "Please wait…"
+    : busy
+      ? "Counselor is responding…"
+      : listenActive
+        ? speech.partial
+          ? "Got it — pause or tap Send"
+          : "Browser speech fallback — speak, then pause"
+        : "Please wait…";
+
   return (
     <div className="flex min-h-screen flex-col bg-[#101918] text-white">
       <header className="flex items-center justify-between px-4 py-3 sm:px-6">
         <div>
           <p className="text-xs tracking-[0.16em] text-[#9dccc5] uppercase">Live session</p>
-          <p className="text-xs text-white/50">AI support · not a licensed clinician</p>
+          <p className="text-xs text-white/50">
+            AI support · voice: {serverVoice ? `Whisper + ${ttsEngine}` : "browser fallback"}
+          </p>
         </div>
         <SessionTimer remainingSec={remaining} />
       </header>
@@ -185,7 +294,7 @@ export function CallRoomPage() {
             avatarId={avatarId}
             expression={expression}
             speaking={speaking}
-            listening={speech.userSpeaking || (listenActive && !speaking)}
+            listening={userSpeaking || (listenActive && !speaking)}
           />
           <p className="mt-5 max-w-lg text-center text-sm leading-relaxed text-white/85">
             {caption ||
@@ -195,7 +304,7 @@ export function CallRoomPage() {
                   ? "…"
                   : "Session ready")}
           </p>
-          {speech.partial && listenActive && (
+          {!serverVoice && speech.partial && listenActive && (
             <p className="mt-2 max-w-md text-center text-xs text-white/45">{speech.partial}</p>
           )}
         </div>
@@ -207,9 +316,9 @@ export function CallRoomPage() {
         />
       </div>
 
-      {(error || speech.error || camera.error) && (
+      {(error || vad.error || speech.error || camera.error) && (
         <p className="px-4 pt-2 text-xs text-[#f0b4ae] sm:px-6">
-          {error || speech.error || camera.error}
+          {error || vad.error || speech.error || camera.error}
         </p>
       )}
 
@@ -230,17 +339,9 @@ export function CallRoomPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 px-4 py-5 sm:px-6">
-          <p className="text-xs text-white/45">
-            {busy
-              ? "Counselor is responding…"
-              : listenActive
-                ? speech.partial
-                  ? "Got it — stop talking and I’ll reply (or tap Send)"
-                  : "Listening… speak, then pause — I’ll reply like an interview AI"
-                : "Please wait…"}
-          </p>
+          <p className="text-xs text-white/45">{voiceHint}</p>
 
-          {listenActive && !busy && (
+          {!serverVoice && listenActive && !busy && (
             <button
               type="button"
               disabled={!speech.partial}
