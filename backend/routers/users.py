@@ -6,6 +6,7 @@ from config import settings
 from db.session import get_db
 from db.models import User
 from services.ids import new_id, utc_now_iso
+from services.locales import normalize_locale
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -24,7 +25,7 @@ def create_user(body: CreateUserRequest, db: Session = Depends(get_db)):
     user = User(
         id=user_id,
         display_name=body.display_name,
-        locale=body.locale,
+        locale=normalize_locale(body.locale),
         age=body.age,
         consent_version=body.consent_version or settings.consent_version,
         consent_at=now,
