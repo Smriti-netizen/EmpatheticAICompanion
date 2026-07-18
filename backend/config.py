@@ -23,17 +23,15 @@ class Settings(BaseSettings):
     )
 
     db_path: str = str(_BACKEND_ROOT / "data" / "empathic.db")
-    # base.en is ~3x faster than small on CPU and accurate for English.
-    # Use "small" (multilingual) if you need Hindi/Hinglish transcription.
-    whisper_model: str = "base.en"
-    whisper_language: str = "en"
+    # Multilingual model required for Hindi/Hinglish (base.en cannot hear Hindi).
+    whisper_model: str = "small"
+    whisper_language: str = "auto"
     whisper_beam_size: int = 1
     piper_model_path: str = ""
     consent_version: str = "2026-07-01"
     session_join_early_min: int = 5
     session_join_late_min: int = 15
     session_duration_sec: int = 2700
-    # "Start now" sessions run 30 minutes; scheduled sessions use the full slot.
     session_practice_duration_sec: int = 1800
     session_buffer_min: int = 10
 
