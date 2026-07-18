@@ -3,11 +3,16 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { api, ApiClientError } from "../../api/client";
 import { AsciiBloom } from "../../components/AsciiBloom";
+import { Diamond } from "../../components/Diamond";
 import { SessionTimer } from "../../components/SessionTimer";
 import { UserCameraPip } from "../../components/UserCameraPip";
 import { useUserCamera } from "../../hooks/useUserCamera";
-import { getAvatarId } from "../../lib/storage";
-import { playBase64Audio, speakWithBrowserTts } from "../../lib/audio";
+import { getAvatarId, getLocale, setAvatarId, setLocale } from "../../lib/storage";
+import {
+  playBase64Audio,
+  speakWithBrowserTts,
+  unlockAudioPlayback,
+} from "../../lib/audio";
 import { useAudioAmplitude } from "../../hooks/useAudioAmplitude";
 import type { AvatarExpression, AvatarId } from "../avatar/avatarCatalog";
 import { getAvatar } from "../avatar/avatarCatalog";
@@ -16,16 +21,16 @@ import { presenceToExpression, usePresenceCues } from "./usePresenceCues";
 import { useFreeSpeechLoop } from "./useFreeSpeechLoop";
 import { useServerVoiceLoop } from "./useServerVoiceLoop";
 
-/**
- * Video-call therapy room.
- * Primary: mic + silence → faster-whisper → counselor → Piper/edge-tts.
- * Fallback only if Whisper is offline: browser SpeechRecognition.
- */
+function asAvatarId(value: string | null | undefined): AvatarId {
+  return value === "aura" || value === "spark" || value === "hop" ? value : "hop";
+}
+
 export function CallRoomPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const camera = useUserCamera();
-  const avatarId = (getAvatarId() as AvatarId) || "hop";
+  const [avatarId, setAvatarState] = useState<AvatarId>(() => asAvatarId(getAvatarId()));
+  const [locale, setLocaleState] = useState(() => getLocale());
 
   const [remaining, setRemaining] = useState(2700);
   const [starting, setStarting] = useState(true);
@@ -42,6 +47,15 @@ export function CallRoomPage() {
   const [draft, setDraft] = useState("");
   const [expression, setExpression] = useState<AvatarExpression>("calm");
   const [serverVoice, setServerVoice] = useState(false);
+  const [greeting, setGreeting] = useState(false);
+  const [mood, setMood] = useState<string | null>(null);
+  const [needsAudioTap, setNeedsAudioTap] = useState(false);
+  const pendingAudioRef = useRef<{
+    text: string;
+    audioBase64?: string | null;
+    audioMime: string;
+    finish: () => void;
+  } | null>(null);
 
   const presence = usePresenceCues(camera.videoRef, camera.enabled && listenActive);
   const messagesRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
@@ -63,7 +77,6 @@ export function CallRoomPage() {
     setSpeaking(false);
   }, []);
 
-  /** Barge-in: user started talking → cut the avatar off and listen. */
   const interruptSpeaking = useCallback(() => {
     if (!speakingRef.current) return;
     stopVoice();
@@ -77,33 +90,69 @@ export function CallRoomPage() {
       setSpeaking(true);
       speakingRef.current = true;
       setCaption(text);
-      const estMs = Math.min(60000, Math.max(2500, text.split(/\s+/).length * 380));
+      // Safety net only — real end is audio.onended. Short estimates were cutting TTS mid-sentence.
+      const safetyMs = Math.min(180000, Math.max(20000, text.split(/\s+/).length * 700));
 
       await new Promise<void>((resolve) => {
         let done = false;
+        let safetyTimer = 0;
         const finish = () => {
           if (done) return;
+          const el = audioElRef.current;
+          // Don't end the turn while edge-tts is still audible — wait for onended.
+          if (el && !el.paused && !el.ended) {
+            el.addEventListener("ended", () => finish(), { once: true });
+            return;
+          }
           done = true;
-          window.clearTimeout(fallback);
+          if (safetyTimer) window.clearTimeout(safetyTimer);
           finishSpeakingRef.current = null;
+          pendingAudioRef.current = null;
+          setNeedsAudioTap(false);
           resolve();
         };
-        finishSpeakingRef.current = finish;
-        const fallback = window.setTimeout(finish, estMs);
+        finishSpeakingRef.current = () => {
+          // Explicit interrupt (barge-in / stop) always wins.
+          if (done) return;
+          done = true;
+          if (safetyTimer) window.clearTimeout(safetyTimer);
+          finishSpeakingRef.current = null;
+          pendingAudioRef.current = null;
+          setNeedsAudioTap(false);
+          resolve();
+        };
+        safetyTimer = window.setTimeout(finish, safetyMs);
+
+        const startBrowser = () => {
+          setAudioEl(null);
+          speakWithBrowserTts(text, finish, { avatarId, locale });
+        };
 
         if (audioBase64) {
           void playBase64Audio(audioBase64, audioMime, finish)
             .then((el) => {
               audioElRef.current = el;
               setAudioEl(el);
+              setNeedsAudioTap(false);
+              const bumpSafety = () => {
+                if (!Number.isFinite(el.duration) || el.duration <= 0) return;
+                window.clearTimeout(safetyTimer);
+                safetyTimer = window.setTimeout(finish, el.duration * 1000 + 2000);
+              };
+              if (el.readyState >= 1) bumpSafety();
+              else el.onloadedmetadata = bumpSafety;
             })
-            .catch(() => {
-              setAudioEl(null);
-              speakWithBrowserTts(text, finish);
+            .catch((err: unknown) => {
+              const name = err instanceof DOMException ? err.name : "";
+              if (name === "NotAllowedError") {
+                pendingAudioRef.current = { text, audioBase64, audioMime, finish };
+                setNeedsAudioTap(true);
+                return;
+              }
+              startBrowser();
             });
         } else {
-          setAudioEl(null);
-          speakWithBrowserTts(text, finish);
+          startBrowser();
         }
       });
 
@@ -113,8 +162,33 @@ export function CallRoomPage() {
       setSpeaking(false);
       setListenActive(true);
     },
-    [],
+    [avatarId, locale],
   );
+
+  const resumePendingAudio = useCallback(async () => {
+    const pending = pendingAudioRef.current;
+    if (!pending) {
+      setNeedsAudioTap(false);
+      return;
+    }
+    await unlockAudioPlayback();
+    setNeedsAudioTap(false);
+    try {
+      if (pending.audioBase64) {
+        const el = await playBase64Audio(
+          pending.audioBase64,
+          pending.audioMime,
+          pending.finish,
+        );
+        audioElRef.current = el;
+        setAudioEl(el);
+        return;
+      }
+    } catch {
+      // fall through to browser TTS
+    }
+    speakWithBrowserTts(pending.text, pending.finish, { avatarId, locale });
+  }, [avatarId, locale]);
 
   const handleUtterance = useCallback(
     async (text: string) => {
@@ -127,7 +201,10 @@ export function CallRoomPage() {
       messagesRef.current = [...messagesRef.current, { role: "user", content: trimmed }];
       setCaption(`You: ${trimmed}`);
       try {
-        const result = await api.sessionChat(id, trimmed);
+        const result = await api.sessionChat(id, trimmed, {
+          avatarId,
+          locale,
+        });
         setRemaining(result.remaining_sec);
         messagesRef.current = [
           ...messagesRef.current,
@@ -143,7 +220,7 @@ export function CallRoomPage() {
         setBusy(false);
       }
     },
-    [id, navigate, playCounselor, stopVoice, summary],
+    [avatarId, id, locale, playCounselor, summary],
   );
 
   const handleAudio = useCallback(
@@ -153,10 +230,21 @@ export function CallRoomPage() {
       setBusy(true);
       setError(null);
       setListenActive(false);
-      setCaption("Transcribing…");
+      setCaption("");
       try {
-        const result = await api.sessionVoice(id, blob);
-        setRemaining(result.remaining_sec);
+        const result = await api.sessionVoice(id, blob, {
+          avatarId,
+          locale,
+        });
+        // Silence / no words — stay on Listening, never show "Could not transcribe".
+        if (result.empty || !result.transcript?.trim() || !result.reply?.trim()) {
+          setCaption("");
+          setListenActive(true);
+          return;
+        }
+        if (typeof result.remaining_sec === "number") {
+          setRemaining(result.remaining_sec);
+        }
         messagesRef.current = [
           ...messagesRef.current,
           { role: "user", content: result.transcript },
@@ -164,20 +252,28 @@ export function CallRoomPage() {
         ];
         setCaption(`You: ${result.transcript}`);
         setExpression(result.expression as AvatarExpression);
-        // Don't await TTS — keeps the mic loop free so the user can barge in.
         void playCounselor(result.reply, result.audio_base64, result.audio_mime);
       } catch (err) {
-        setError(err instanceof ApiClientError ? err.message : "Counselor unavailable");
+        const msg = err instanceof ApiClientError ? err.message : "Counselor unavailable";
+        // Treat empty-audio / soft STT failures as keep-listening, not a red error.
+        if (
+          /transcrib|no speech|empty|could not understand/i.test(msg) ||
+          (err instanceof ApiClientError && err.status === 400)
+        ) {
+          setCaption("");
+          setListenActive(true);
+          return;
+        }
+        setError(msg);
         setListenActive(true);
       } finally {
         busyRef.current = false;
         setBusy(false);
       }
     },
-    [id, navigate, playCounselor, stopVoice, summary],
+    [avatarId, id, locale, playCounselor, summary],
   );
 
-  // Server voice keeps the mic open the whole session (enables barge-in).
   const canUseServerVoice = serverVoice && !summary && !starting;
   const canUseBrowserSpeech = !serverVoice && listenActive && !summary && !starting;
 
@@ -191,6 +287,7 @@ export function CallRoomPage() {
 
   const speech = useFreeSpeechLoop({
     active: canUseBrowserSpeech,
+    locale,
     onUtterance: handleUtterance,
   });
 
@@ -217,7 +314,17 @@ export function CallRoomPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const started = await api.startSession(id);
+        // Trust the companion shown in the UI (localStorage). Never let a stale
+        // DB value (e.g. hop/Milo) overwrite Coco and force a male voice.
+        const localAvatar = asAvatarId(getAvatarId());
+        const localLocale = getLocale();
+        setAvatarState(localAvatar);
+        setLocaleState(localLocale);
+        setAvatarId(localAvatar);
+        const started = await api.startSession(id, {
+          avatarId: localAvatar,
+          locale: localLocale,
+        });
         if (cancelled) return;
         setRemaining(started.duration_target_sec);
         messagesRef.current = [
@@ -241,6 +348,13 @@ export function CallRoomPage() {
       stopVoice();
     };
   }, [id, playCounselor, stopVoice]);
+
+  useEffect(() => {
+    if (starting) return;
+    setGreeting(true);
+    const t = window.setTimeout(() => setGreeting(false), 2600);
+    return () => window.clearTimeout(t);
+  }, [starting]);
 
   useEffect(() => {
     if (summary) return;
@@ -272,9 +386,9 @@ export function CallRoomPage() {
 
   if (starting) {
     return (
-      <div className="grid min-h-screen place-items-center bg-paper text-sm text-muted">
-        <div className="flex flex-col items-center gap-5">
-          <AsciiBloom label="Getting your space ready…" size="lg" />
+      <div className="grid h-[100dvh] place-items-center bg-[#1C1815] text-cream">
+        <div className="flex flex-col items-center gap-5 px-6">
+          <AsciiBloom label="Getting your space ready." size="lg" tone="cream" />
         </div>
       </div>
     );
@@ -287,7 +401,7 @@ export function CallRoomPage() {
       : isListening
         ? userSpeaking
           ? "Listening…"
-          : "I'm here — go ahead"
+          : "I'm here, go ahead"
         : "One moment…";
 
   const statusColor = busy
@@ -299,62 +413,65 @@ export function CallRoomPage() {
         : "#8a8071";
 
   return (
-    <div
-      className="flex min-h-screen flex-col text-ink"
-      style={{
-        background:
-          "radial-gradient(ellipse 70% 45% at 12% -5%, #f6e1d6 0%, transparent 55%)," +
-          "radial-gradient(ellipse 55% 40% at 100% 0%, #e6efe0 0%, transparent 50%)," +
-          "#f7f2e9",
-      }}
-    >
-      <header className="flex items-center justify-between px-4 py-4 sm:px-8">
-        <div className="flex items-center gap-2">
+    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#1C1815] text-cream pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {needsAudioTap && (
+        <button
+          type="button"
+          onClick={() => void resumePendingAudio()}
+          className="absolute inset-0 z-50 grid place-items-center bg-[#1C1815]/72 px-6 backdrop-blur-[2px]"
+        >
+          <span className="max-w-xs border border-cream/25 bg-[#2b2622] px-6 py-5 text-center font-display text-[18px] leading-snug text-cream">
+            Tap to hear {preset.name}
+          </span>
+        </button>
+      )}
+
+      <header className="flex shrink-0 items-center justify-between gap-3 px-3 py-3 sm:px-6 sm:py-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <span
-            className="inline-block h-2 w-2 rounded-full"
+            className="inline-block h-[7px] w-[7px] shrink-0 rounded-full"
             style={{ background: statusColor, boxShadow: `0 0 10px ${statusColor}` }}
           />
-          <p className="text-sm font-semibold text-ink">{preset.name}</p>
-          <span className="rounded-full bg-surface/80 px-2 py-0.5 text-[10px] font-medium tracking-wide text-muted ring-1 ring-line">
+          <p className="truncate font-mono text-[12px] tracking-[0.04em] text-cream/85">
+            {preset.name}
+          </p>
+          <span className="hidden font-mono text-[11px] tracking-[0.05em] text-dusk uppercase sm:inline">
             AI companion
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] tracking-[0.22em] text-muted uppercase">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <span className="hidden font-mono text-[11px] tracking-[0.14em] text-cream/40 uppercase sm:inline">
             Session
           </span>
           <SessionTimer remainingSec={remaining} />
         </div>
       </header>
 
-      {/* A held, contained moment — flourish-cornered card, never black */}
-      <div className="relative mx-3 flex min-h-[60vh] flex-1 items-center justify-center overflow-hidden rounded-[32px] bg-surface/60 shadow-warm ring-1 ring-white/70 backdrop-blur-sm sm:mx-6">
+      <div className="relative mx-2 min-h-0 flex-1 overflow-hidden rounded-[8px] border border-cream/12 sm:mx-5 md:mx-6">
+        <LiveCatAvatar
+          avatarId={avatarId}
+          expression={expression}
+          amplitude={amplitude}
+          speaking={speaking}
+          listening={isListening}
+          greeting={greeting}
+          variant="fill"
+        />
         <FlourishCorners />
-        <div className="flex flex-col items-center px-4 py-8">
-          <LiveCatAvatar
-            avatarId={avatarId}
-            expression={expression}
-            amplitude={amplitude}
-            speaking={speaking}
-            listening={isListening}
-          />
 
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 bg-gradient-to-t from-[#1C1815]/95 via-[#1C1815]/45 to-transparent px-3 pt-16 pb-4 sm:px-4 sm:pt-20 sm:pb-6">
           {busy ? (
-            <div className="mt-7">
-              <AsciiBloom label="Let me gather my thoughts…" />
-            </div>
+            <AsciiBloom label="Let me gather my thoughts." tone="cream" />
           ) : (
             showCaptions && (
-              <p className="mt-7 max-w-lg text-center text-[15px] leading-relaxed text-ink/80">
-                {caption ||
-                  (isListening ? "I'm listening — take your time." : "…")}
+              <p className="max-w-lg text-center font-display text-[15px] leading-[1.45] font-light text-cream/92 sm:text-[18px] sm:leading-[1.5]">
+                {caption || (isListening ? "I'm listening, take your time." : "...")}
               </p>
             )
           )}
         </div>
 
-        {/* name chip like Meet tiles */}
-        <span className="absolute bottom-4 left-4 rounded-lg bg-surface/80 px-3 py-1 text-xs font-medium text-ink ring-1 ring-line">
+        <span className="absolute bottom-3 left-3 z-20 bg-ink/45 px-2.5 py-1 font-mono text-[10px] tracking-[0.04em] text-cream backdrop-blur sm:bottom-4 sm:left-4 sm:px-3 sm:py-1.5 sm:text-[11px]">
           {preset.name}
         </span>
 
@@ -366,43 +483,83 @@ export function CallRoomPage() {
       </div>
 
       {(error || serverLoop.error || speech.error || camera.error) && (
-        <p className="px-4 pt-3 text-center text-xs text-crisis sm:px-8">
+        <p className="shrink-0 px-3 pt-2 text-center font-mono text-[11px] text-rose sm:px-8 sm:text-[12px]">
           {error || serverLoop.error || speech.error || camera.error}
         </p>
       )}
 
       {summary ? (
-        <div className="m-4 rounded-3xl border border-line bg-surface p-6 shadow-warm sm:m-6">
-          <h2 className="font-display text-xl font-semibold text-ink">Session ended</h2>
-          <p className="mt-2 text-sm text-muted">{summary.summary}</p>
-          <p className="mt-3 text-sm text-ink">
-            <span className="font-semibold">A small step to try:</span> {summary.homework}
+        <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-cream px-5 py-10 text-center text-ink sm:px-6 sm:py-14">
+          <div className="mb-6 flex gap-2 sm:mb-7">
+            <Diamond size={8} />
+            <Diamond size={8} color="var(--color-forest)" />
+            <Diamond size={8} color="var(--color-dusk)" />
+          </div>
+          <h2 className="max-w-[520px] font-display text-[28px] leading-[1.2] font-normal sm:text-[38px]">
+            You've had a <span className="font-script text-rose italic">gentle</span> session.
+          </h2>
+          <p className="mt-4 max-w-[440px] text-[14px] leading-[1.6] text-ink/65 sm:text-[15px]">
+            {summary.summary}
           </p>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard")}
-            className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white"
-          >
-            Back to dashboard
-          </button>
+          <p className="mt-4 max-w-[440px] text-[14px] leading-[1.6] text-ink/80 sm:text-[15px]">
+            <span className="font-mono text-[12px] tracking-[0.06em] text-rose uppercase">
+              A small step to try
+            </span>
+            <br />
+            {summary.homework}
+          </p>
+          <div className="mt-8 flex w-full max-w-md flex-col items-stretch gap-3 sm:mt-9 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4">
+            <button
+              type="button"
+              onClick={() => navigate("/book")}
+              className="border border-forest bg-forest px-6 py-3.5 font-mono text-[13px] tracking-[0.05em] text-cream uppercase transition hover:opacity-90"
+            >
+              Book next session
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="border border-line px-6 py-3.5 font-mono text-[13px] tracking-[0.05em] text-ink uppercase transition hover:border-ink/40"
+            >
+              Exit to home
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              className="py-2 text-[14px] text-ink/60 underline underline-offset-4 transition hover:text-ink"
+            >
+              Your sessions
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-4 px-4 py-6 sm:px-8">
-          <p className="text-xs font-medium text-muted">{voiceHint}</p>
+        <div className="flex shrink-0 flex-col items-center gap-3 px-3 py-3 sm:gap-4 sm:px-8 sm:py-5">
+          <p className="font-mono text-[10px] tracking-[0.06em] text-cream/50 uppercase sm:text-[11px]">
+            {voiceHint}
+          </p>
+
+          {!busy && (
+            <MoodChips
+              selected={mood}
+              onPick={(label) => {
+                setMood(label);
+                void handleUtterance(`Right now I'm feeling ${label.toLowerCase()}.`);
+              }}
+            />
+          )}
 
           {!serverVoice && listenActive && !busy && (
             <button
               type="button"
               disabled={!speech.partial}
               onClick={() => speech.forceEndTurn()}
-              className="rounded-full border border-line bg-white px-6 py-2 text-sm font-semibold text-ink shadow-sm hover:bg-accent-soft disabled:opacity-40"
+              className="border border-cream/20 bg-[#2b2622] px-5 py-2 font-mono text-[11px] tracking-[0.05em] text-cream uppercase transition hover:border-cream/40 disabled:opacity-40 sm:px-6 sm:py-2.5 sm:text-[12px]"
             >
               Send what I said
             </button>
           )}
 
-          {/* Meet-style control bar */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <RoundControl
               label={showCaptions ? "Hide captions" : "Show captions"}
               active={showCaptions}
@@ -424,9 +581,9 @@ export function CallRoomPage() {
               disabled={busy}
               onClick={() => void endCall()}
               aria-label="End session"
-              className="grid h-14 w-20 place-items-center rounded-full bg-[#d15b52] text-white shadow-lg transition hover:brightness-110 disabled:opacity-50"
+              className="grid h-12 min-w-[7.5rem] place-items-center rounded-full bg-rose px-5 py-3 font-mono text-[12px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep disabled:opacity-50 sm:min-w-0 sm:px-7 sm:text-[13px]"
             >
-              <HangupIcon />
+              End session
             </button>
           </div>
 
@@ -444,12 +601,12 @@ export function CallRoomPage() {
               <input
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                className="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none focus:border-accent"
-                placeholder="Type your message…"
+                className="min-w-0 flex-1 border border-cream/20 bg-[#2b2622] px-3 py-2.5 text-[15px] text-cream outline-none placeholder:text-cream/40 focus:border-dusk sm:px-4 sm:py-3"
+                placeholder="Type your message..."
               />
               <button
                 type="submit"
-                className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white"
+                className="shrink-0 bg-rose px-4 py-2.5 font-mono text-[12px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep sm:px-5 sm:py-3"
               >
                 Send
               </button>
@@ -461,7 +618,38 @@ export function CallRoomPage() {
   );
 }
 
-// Delicate ornate brackets in each corner — "held / contained" framing.
+const MOODS = ["Calm", "Heavy", "Hopeful", "Stuck"];
+
+function MoodChips({
+  selected,
+  onPick,
+}: {
+  selected: string | null;
+  onPick: (label: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2">
+      {MOODS.map((label) => {
+        const active = selected === label;
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onPick(label)}
+            className={`border px-3.5 py-1.5 font-mono text-[11px] tracking-[0.05em] uppercase transition active:scale-95 ${
+              active
+                ? "border-rose text-rose"
+                : "border-cream/20 text-cream/70 hover:border-cream/40"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function FlourishCorners() {
   const corners = [
     "left-3 top-3",
@@ -474,18 +662,12 @@ function FlourishCorners() {
       {corners.map((pos) => (
         <svg
           key={pos}
-          className={`pointer-events-none absolute ${pos} h-8 w-8 text-accent/30`}
-          viewBox="0 0 40 40"
+          className={`pointer-events-none absolute z-20 ${pos} h-7 w-7 text-rose`}
+          viewBox="0 0 28 28"
           fill="none"
           aria-hidden="true"
         >
-          <path
-            d="M2 20 Q2 2 20 2 M2 12 Q2 6 8 4 M12 2 Q6 2 4 8"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-          />
-          <circle cx="4" cy="4" r="1.4" fill="currentColor" />
+          <path d="M2 12 V2 H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square" />
         </svg>
       ))}
     </>
@@ -509,10 +691,10 @@ function RoundControl({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`grid h-14 w-14 place-items-center rounded-full ring-1 transition ${
+      className={`grid h-12 w-12 place-items-center rounded-full border transition ${
         active
-          ? "bg-accent text-white ring-accent"
-          : "bg-white text-ink ring-line hover:bg-accent-soft"
+          ? "border-dusk bg-dusk text-cream"
+          : "border-cream/15 bg-[#332C27] text-cream hover:border-cream/35"
       }`}
     >
       {children}
@@ -538,10 +720,3 @@ function KeyboardIcon() {
   );
 }
 
-function HangupIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 9c-1.6 0-3.15.25-4.6.7v3.1c0 .5-.3.95-.73 1.14-.86.4-1.65.9-2.36 1.5a1.1 1.1 0 0 1-1.5-.06L.68 14.3a1.1 1.1 0 0 1 0-1.56C3.7 9.9 7.63 8.2 12 8.2s8.3 1.7 11.32 4.54a1.1 1.1 0 0 1 0 1.56l-1.73 1.72a1.1 1.1 0 0 1-1.5.06c-.71-.6-1.5-1.1-2.36-1.5a1.27 1.27 0 0 1-.73-1.14v-3.1C15.15 9.25 13.6 9 12 9Z" transform="rotate(135 12 12)" />
-    </svg>
-  );
-}
