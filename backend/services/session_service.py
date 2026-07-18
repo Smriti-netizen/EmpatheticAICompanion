@@ -8,9 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from config import settings
-from db.models import CounselingSession, Message, SafetyEvent, SessionNote, UserProfile
+from db.models import CounselingSession, Message, SafetyEvent, SessionNote, User, UserProfile
 from services import avatar_hints
 from services.ids import new_id, utc_now_iso
+from services.locales import language_instruction, normalize_locale
 from services.memory import build_memory_block_for_user
 from services.ollama_client import OllamaError, chat as ollama_chat
 from services.safety import (
@@ -140,7 +141,11 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
             "concrete homework step."
         )
 
+    user = db.get(User, session.user_id)
+    locale = normalize_locale(user.locale if user else None)
+
     system_extra = memory
+    system_extra = f"{system_extra}\n\n{language_instruction(locale)}"
     if wrap_hint:
         system_extra = f"{system_extra}\n\n[SESSION TIMER]\n{wrap_hint}"
     if crisis_signal:
@@ -249,12 +254,12 @@ async def close_session(db: Session, session_id: str, mood_end: int | None) -> d
 
 
 async def _opening_message(db: Session, user_id: str) -> str:
-    from db.models import SessionNote, User
+    from db.models import SessionNote
 
     user = db.get(User, user_id)
     profile = db.get(UserProfile, user_id)
     name = (user.display_name if user and user.display_name else "").strip()
-    greeting = f"Hi {name}, " if name else "Hi, "
+    locale = normalize_locale(user.locale if user else None)
     goal = profile.session_goal if profile and profile.session_goal else None
 
     session_ids = db.scalars(
@@ -271,16 +276,49 @@ async def _opening_message(db: Session, user_id: str) -> str:
     if last_note:
         snippet = last_note.summary[:180].rstrip(".")
         homework = (last_note.homework or "that small practice").strip()
-        return (
-            f"{greeting}good to see you again. Last time we touched on {snippet}. "
-            f"How did {homework} go for you?"
-        )
+        return _localized_return_opening(locale, name, snippet, homework)
     if goal:
+        return _localized_goal_opening(locale, name, goal)
+    return _localized_fresh_opening(locale, name)
+
+
+def _localized_fresh_opening(locale: str, name: str) -> str:
+    if locale.startswith("hi"):
+        greet = f"नमस्ते {name}, " if name else "नमस्ते, "
         return (
-            f"{greeting}I'm really glad you made it. You mentioned wanting to work on {goal} — "
-            "where would you like to begin today?"
+            f"{greet}आपका यहाँ होना अच्छा लग रहा है। एक साँस लें — "
+            "जब तैयार हों, तो बताइए अभी दिल पर क्या है?"
         )
+    greet = f"Hi {name}, " if name else "Hi, "
     return (
-        f"{greeting}I'm glad you're here. Take a breath — whenever you're ready, "
+        f"{greet}I'm glad you're here. Take a breath — whenever you're ready, "
         "what's been sitting with you?"
+    )
+
+
+def _localized_goal_opening(locale: str, name: str, goal: str) -> str:
+    if locale.startswith("hi"):
+        greet = f"नमस्ते {name}, " if name else "नमस्ते, "
+        return (
+            f"{greet}आपके आने की खुशी है। आपने {goal} पर काम करने की बात कही थी — "
+            "आज कहाँ से शुरू करना चाहेंगे?"
+        )
+    greet = f"Hi {name}, " if name else "Hi, "
+    return (
+        f"{greet}I'm really glad you made it. You mentioned wanting to work on {goal} — "
+        "where would you like to begin today?"
+    )
+
+
+def _localized_return_opening(locale: str, name: str, snippet: str, homework: str) -> str:
+    if locale.startswith("hi"):
+        greet = f"नमस्ते {name}, " if name else "नमस्ते, "
+        return (
+            f"{greet}फिर से मिलकर अच्छा लगा। पिछली बार हमने {snippet} की बात की थी। "
+            f"{homework} कैसा रहा?"
+        )
+    greet = f"Hi {name}, " if name else "Hi, "
+    return (
+        f"{greet}good to see you again. Last time we touched on {snippet}. "
+        f"How did {homework} go for you?"
     )
