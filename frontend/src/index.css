@@ -1,24 +1,46 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
   --font-display: "Fraunces", Georgia, serif;
-  --font-sans: "DM Sans", system-ui, sans-serif;
-  /* Soft Bloom palette — warm, never pure black. */
-  --color-ink: #2e2a24; /* warm charcoal (darkest text) */
-  --color-muted: #8a8071; /* soft taupe */
-  --color-paper: #f7f2e9; /* warm cream canvas */
-  --color-surface: #fbf8f2; /* soft ivory cards/bubbles */
-  --color-line: #e6ddc9; /* hairline */
-  --color-accent: #e4643a; /* terracotta */
-  --color-accent-soft: #f6e1d6; /* soft terracotta tint */
-  --color-sage: #5c7a5e; /* calm / safe */
-  --color-sky: #7fa8b8; /* session / info */
-  --color-glow: #fff3d6; /* AI presence glow */
-  --color-charcoal: #3a362e; /* darkest surface allowed (call letterbox) */
-  --color-user: #f3dccf; /* user bubble */
-  --color-crisis: #9a4a3a;
-  --color-crisis-bg: #f6e2da;
+  --font-sans: "Inter", system-ui, sans-serif;
+  /* Calibri instead of robotic monospace for labels / system text. */
+  --font-mono: Calibri, Candara, "Segoe UI", sans-serif;
+  --font-script: "Instrument Serif", Georgia, serif;
+
+  /* Coco palette, locked, merged from the 3 posters. No 7th color,
+     no pure black, no pure white. */
+  --color-cream: #f5efe3; /* base — matches botanical PNG cream */
+  --color-cream-deep: #ede4d2;
+  --color-ink: #2a2420; /* primary text */
+  --color-rose: #9c2f45; /* primary accent, CTAs */
+  --color-rose-deep: #7c2536; /* pressed / hover rose */
+  --color-forest: #33452f; /* secondary accent */
+  --color-dusk: #3e5c8a; /* AI-only: bubbles, timers, tags, glyphs */
+  --color-blush: #ead9ce; /* card fills, soft surfaces */
+
+  /* Softened near-white / near-black so no pure #fff or #000 appears. */
+  --color-white: #fbf7ee;
+  --color-black: #2a2420;
+
+  /* Legacy token names remapped onto the locked palette so existing
+     screens stay on-palette until each is fully re-skinned. */
+  --color-paper: #f5efe3;
+  --color-surface: #fbf7ee;
+  --color-muted: #6f665b;
+  --color-line: rgba(42, 36, 32, 0.14);
+  --color-accent: #9c2f45; /* primary accent -> rose */
+  --color-accent-soft: #f0e2da;
+  --color-sage: #33452f; /* -> forest */
+  --color-sky: #3e5c8a; /* -> dusk */
+  --color-lavender: #3e5c8a; /* -> dusk */
+  --color-lavender-soft: #ead9ce;
+  --color-sun: #9c2f45; /* -> rose */
+  --color-glow: #ede4d2;
+  --color-charcoal: #1c1815; /* session letterbox */
+  --color-user: #e7e9e2;
+  --color-crisis: #9c2f45;
+  --color-crisis-bg: #f0e2da;
 }
 
 * {
@@ -29,36 +51,163 @@ html,
 body,
 #root {
   min-height: 100%;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbars site-wide (page still scrolls with wheel/trackpad). */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--color-ink);
-  background:
-    radial-gradient(ellipse 80% 50% at 8% -10%, #f6e1d6 0%, transparent 55%),
-    radial-gradient(ellipse 60% 45% at 100% 0%, #e6efe0 0%, transparent 48%),
-    var(--color-paper);
+  background: var(--color-cream);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* Paper grain — subtle, on every surface, so nothing feels flat/SaaS. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 60;
-  opacity: 0.035;
-  background-image: radial-gradient(#2e2a24 1px, transparent 1.3px);
-  background-size: 3px 3px;
-}
-
-/* Warm, sunlight-like shadows (never grey UI elevation). */
+/* Soft, warm shadows (never grey UI elevation). */
 .shadow-warm {
-  box-shadow: 0 22px 60px -28px rgba(228, 100, 58, 0.3);
+  box-shadow: 0 22px 60px -30px rgba(42, 36, 32, 0.28);
 }
 .shadow-warm-sm {
-  box-shadow: 0 8px 24px -14px rgba(228, 100, 58, 0.28);
+  box-shadow: 0 8px 24px -14px rgba(42, 36, 32, 0.22);
+}
+
+/* Flat cream canvases: the posters use plain backdrops, not gradient washes. */
+.bloom-wash,
+.bloom-wash-warm {
+  background: var(--color-cream);
+}
+/* Blush card / bubble surface. */
+.surface-tinted {
+  background: var(--color-blush);
+}
+
+/* Diamond / rhombus bullet: the one recurring icon motif (Poster 1). */
+.diamond {
+  display: inline-block;
+  transform: rotate(45deg);
+  background: var(--color-rose);
+}
+
+/* Fine, even halftone / newsprint dot screen laid over the whole hero
+   (Poster 3), not just the dissolve area. */
+.halftone {
+  background-image: radial-gradient(rgba(42, 36, 32, 0.22) 0.7px, transparent 0.8px);
+  background-size: 4px 4px;
+}
+
+@keyframes sparkleTwinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes waveHand {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15%,
+  45% {
+    transform: rotate(18deg);
+  }
+  30% {
+    transform: rotate(-8deg);
+  }
+}
+
+@keyframes greetBounce {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    transform: translateY(-10px) scale(1.03);
+  }
+  55% {
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    transform: translateY(-4px) scale(1.01);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes headSway {
+  0%,
+  100% {
+    transform: rotate(-1.2deg);
+  }
+  50% {
+    transform: rotate(1.2deg);
+  }
+}
+
+@keyframes wingFlutter {
+  0%,
+  100% {
+    transform: scaleX(1) rotate(0deg);
+  }
+  50% {
+    transform: scaleX(0.82) rotate(-2deg);
+  }
+}
+
+@keyframes driftAround {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(10px, -14px) rotate(6deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes doodleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes bubblePop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  60% {
+    transform: translateY(-1px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes fadeSlide {
@@ -100,6 +249,32 @@ body::after {
   }
   50% {
     transform: rotate(6deg);
+  }
+}
+
+@keyframes earTwitchLeft {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(-3deg);
+  }
+  70% {
+    transform: rotate(1.5deg);
+  }
+}
+
+@keyframes earTwitchRight {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(3deg);
+  }
+  70% {
+    transform: rotate(-1.5deg);
   }
 }
 

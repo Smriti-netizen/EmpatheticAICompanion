@@ -1,7 +1,9 @@
 interface AsciiBloomProps {
-  /** Warm microcopy shown under the bloom (e.g. "Let me gather my thoughts…"). */
+  /** Warm microcopy shown under the bloom (e.g. "Let me gather my thoughts."). */
   label?: string;
   size?: "sm" | "lg";
+  /** "rose" on light surfaces, "cream" on the dark session background. */
+  tone?: "rose" | "cream";
   className?: string;
 }
 
@@ -14,8 +16,10 @@ const BLOOM = ["  .  *  .", " * °   ° *", ".  °  +  °  .", " * °   ° *", "
  * opening bloom — used instead of spinners or three grey dots, and as the
  * graceful fallback whenever an AI reply isn't ready yet.
  */
-export function AsciiBloom({ label, size = "sm", className = "" }: AsciiBloomProps) {
+export function AsciiBloom({ label, size = "sm", tone = "rose", className = "" }: AsciiBloomProps) {
   const textCls = size === "lg" ? "text-sm sm:text-base" : "text-[11px]";
+  const bloomColor = tone === "cream" ? "text-cream/80" : "text-rose";
+  const labelColor = tone === "cream" ? "text-cream/55" : "text-ink/55";
   return (
     <div
       className={`flex flex-col items-center gap-2 ${className}`}
@@ -23,7 +27,7 @@ export function AsciiBloom({ label, size = "sm", className = "" }: AsciiBloomPro
       aria-label={label ?? "Thinking"}
     >
       <div
-        className={`font-mono ${textCls} leading-[1.2] tracking-[0.15em] text-accent select-none`}
+        className={`font-mono ${textCls} leading-[1.2] tracking-[0.15em] ${bloomColor} select-none`}
         style={{ animation: "bloomGlow 3s ease-in-out infinite" }}
         aria-hidden="true"
       >
@@ -37,9 +41,7 @@ export function AsciiBloom({ label, size = "sm", className = "" }: AsciiBloomPro
           </div>
         ))}
       </div>
-      {label && (
-        <span className="text-[11px] tracking-wide text-muted italic">{label}</span>
-      )}
+      {label && <span className={`font-mono text-[11px] tracking-[0.04em] ${labelColor}`}>{label}</span>}
     </div>
   );
 }
