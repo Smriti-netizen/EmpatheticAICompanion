@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coco — getting to know you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F5EFE3; --cream-deep:#EDE4D2; --ink:#2A2420;
+    --rose:#9C2F45; --rose-deep:#7C2536; --forest:#33452F;
+    --dusk:#3E5C8A; --blush:#EAD9CE; --line: rgba(42,36,32,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--cream); color:var(--ink); font-family:'Inter', sans-serif;
+    display:flex; flex-direction:column; -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 40px; border-bottom:1px solid var(--line);
+  }
+  .logo{font-family:'Fraunces', serif; font-weight:500; font-size:19px; display:flex; align-items:center; gap:9px;}
+  .logo .mark{width:12px; height:12px; background:var(--rose); transform:rotate(45deg); display:inline-block;}
+  .progress{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Space Mono', monospace; font-size:12px; letter-spacing:0.06em; color:rgba(42,36,32,0.55);
+  }
+  .dots{display:flex; gap:6px;}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--line);}
+  .dot.active{background:var(--rose);}
+  .exit{font-size:13px; color:var(--ink); opacity:0.55; text-decoration:none;}
+
+  .chat-shell{flex:1; max-width:720px; margin:0 auto; width:100%; display:flex; flex-direction:column; padding:32px 24px 0;}
+  .intro{text-align:center; margin-bottom:28px;}
+  .intro h1{font-family:'Fraunces', serif; font-weight:400; font-size:26px;}
+  .intro h1 em{font-family:'Instrument Serif', serif; font-style:italic; color:var(--rose);}
+  .intro p{margin-top:8px; font-size:14px; color:rgba(42,36,32,0.6);}
+
+  .thread{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:18px; padding-bottom:24px;}
+  .row{display:flex; gap:10px; max-width:82%;}
+  .row.ai{align-self:flex-start;}
+  .row.user{align-self:flex-end; flex-direction:row-reverse;}
+  .bubble{
+    padding:14px 18px; font-size:15px; line-height:1.55; border-radius:2px;
+  }
+  .row.ai .bubble{background:var(--blush); color:var(--ink); border-top-left-radius:14px; border-bottom-right-radius:14px; border-top-right-radius:14px;}
+  .row.user .bubble{background:var(--forest); color:var(--cream); border-top-right-radius:14px; border-bottom-left-radius:14px; border-top-left-radius:14px;}
+  .meta{font-family:'Space Mono', monospace; font-size:10px; letter-spacing:0.05em; color:rgba(42,36,32,0.4); margin-top:6px;}
+  .row.user .meta{text-align:right;}
+
+  .chips{display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 0 0; align-self:flex-start;}
+  .chip{
+    font-family:'Space Mono', monospace; font-size:12px; padding:8px 14px; border:1px solid var(--line);
+    background:transparent; color:var(--ink); cursor:pointer; transition:all .15s;
+  }
+  .chip:hover{border-color:var(--rose); color:var(--rose);}
+
+  .composer{
+    border-top:1px solid var(--line); padding:18px 0 26px; max-width:720px; margin:0 auto; width:100%;
+  }
+  .composer form{display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--line); padding:6px 6px 6px 18px;}
+  .composer input{
+    flex:1; border:none; outline:none; background:transparent; font-family:'Inter', sans-serif; font-size:15px; color:var(--ink);
+  }
+  .composer input::placeholder{color:rgba(42,36,32,0.4);}
+  .send{
+    font-family:'Space Mono', monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.05em;
+    background:var(--rose); color:var(--cream); border:none; padding:12px 20px; cursor:pointer;
+  }
+  .composer .hint{text-align:center; font-size:11px; color:rgba(42,36,32,0.4); margin-top:10px; font-family:'Space Mono', monospace;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><span class="mark"></span>Coco</div>
+  <div class="progress">Question 3 of 8
+    <div class="dots">
+      <div class="dot active"></div><div class="dot active"></div><div class="dot active"></div>
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+  </div>
+  <a class="exit" href="01-landing.html">Save &amp; exit</a>
+</div>
+
+<div class="chat-shell">
+  <div class="intro">
+    <h1>Let's get a <em>little context</em> first.</h1>
+    <p>Nothing formal — just enough for Coco to understand where to start.</p>
+  </div>
+
+  <div class="thread">
+    <div class="row ai">
+      <div>
+        <div class="bubble">Hi, I'm Coco. Before we talk, tell me a little about what's on your mind today — no need to explain everything at once.</div>
+        <div class="meta">COCO · 09:41</div>
+      </div>
+    </div>
+
+    <div class="row user">
+      <div>
+        <div class="bubble">I've been feeling pretty stretched thin lately. Work, mostly.</div>
+        <div class="meta">YOU · 09:42</div>
+      </div>
+    </div>
+
+    <div class="row ai">
+      <div>
+        <div class="bubble">That makes sense — "stretched thin" is a specific feeling. Has it been building for a while, or did something recent tip it over?</div>
+        <div class="meta">COCO · 09:42</div>
+      </div>
+    </div>
+
+    <div class="row user">
+      <div>
+        <div class="bubble">Building for a while, honestly. I just haven't said it out loud until now.</div>
+        <div class="meta">YOU · 09:43</div>
+      </div>
+    </div>
+
+    <div class="row ai">
+      <div>
+        <div class="bubble">Thanks for saying it here first, then. One more thing — how would you like today's conversation to go?</div>
+        <div class="meta">COCO · 09:43</div>
+      </div>
+    </div>
+
+    <div class="chips">
+      <button class="chip">Just let me talk</button>
+      <button class="chip">Ask me questions</button>
+      <button class="chip">Help me find words for it</button>
+    </div>
+  </div>
+</div>
+
+<div class="composer">
+  <form onsubmit="return false;">
+    <input type="text" placeholder="Say whatever's on your mind...">
+    <button class="send" type="submit">Send</button>
+  </form>
+  <div class="hint">This chat is private and isn't reviewed by anyone but you and Coco.</div>
+</div>
+
+</body>
+</html>

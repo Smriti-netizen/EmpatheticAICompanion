@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Session with Coco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F5EFE3; --ink:#2A2420; --rose:#9C2F45; --rose-deep:#7C2536;
+    --forest:#33452F; --dusk:#3E5C8A; --blush:#EAD9CE; --line: rgba(245,239,227,0.16);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:#1C1815; color:var(--cream); font-family:'Inter', sans-serif;
+    display:flex; flex-direction:column; -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; padding:18px 28px;
+  }
+  .meeting-name{font-family:'Space Mono', monospace; font-size:12px; letter-spacing:0.04em; color:rgba(245,239,227,0.6); display:flex; align-items:center; gap:8px;}
+  .rec-dot{width:7px; height:7px; border-radius:50%; background:var(--rose); animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .timer{font-family:'Space Mono', monospace; font-size:12px; color:rgba(245,239,227,0.6);}
+
+  .stage{
+    flex:1; display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .avatar-frame{
+    width:min(480px, 86vw); aspect-ratio:1/1; border-radius:6px; position:relative;
+    background:radial-gradient(circle at 50% 45%, #2b2622 0%, #1C1815 78%);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    border:1px solid var(--line);
+  }
+  /* illustrated breathing orb standing in for Coco — no photoreal avatar used */
+  .orb{
+    width:180px; height:180px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #E0AEBC 0%, #9C2F45 55%, #5C1E2C 100%);
+    box-shadow: 0 0 60px rgba(156,47,69,0.45);
+    animation: breathe 4.5s ease-in-out infinite;
+    position:relative;
+  }
+  .orb::after{
+    content:''; position:absolute; inset:22px; border-radius:50%;
+    background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.35), transparent 60%);
+  }
+  @keyframes breathe{
+    0%,100%{ transform:scale(1); box-shadow:0 0 60px rgba(156,47,69,0.45); }
+    50%{ transform:scale(1.08); box-shadow:0 0 90px rgba(156,47,69,0.6); }
+  }
+  .caption-tag{
+    position:absolute; bottom:18px; left:18px;
+    font-family:'Space Mono', monospace; font-size:12px; letter-spacing:0.04em;
+    background:rgba(0,0,0,0.35); padding:6px 12px; border-radius:2px;
+  }
+  .self-tile{
+    position:absolute; bottom:24px; right:24px; width:130px; aspect-ratio:4/3;
+    background:#2b2622; border:1px solid var(--line); border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .self-tile span{font-family:'Space Mono', monospace; font-size:11px; color:rgba(245,239,227,0.5);}
+
+  .caption-bar{
+    max-width:640px; margin:22px auto 0; text-align:center; padding:0 24px;
+  }
+  .caption-bar .label{font-family:'Space Mono', monospace; font-size:11px; letter-spacing:0.06em; color:rgba(245,239,227,0.4); margin-bottom:8px; text-transform:uppercase;}
+  .caption-bar p{font-family:'Fraunces', serif; font-weight:300; font-size:20px; line-height:1.5; color:rgba(245,239,227,0.92);}
+  .caption-bar p em{font-family:'Instrument Serif', serif; font-style:italic; color:#D98BA0;}
+
+  .controls{
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    padding:26px 0 34px;
+  }
+  .ctrl{
+    width:52px; height:52px; border-radius:50%; background:#332C27; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; color:var(--cream); cursor:pointer;
+    font-size:18px;
+  }
+  .ctrl.off{background:#443833;}
+  .ctrl.end{
+    width:auto; border-radius:26px; padding:0 26px; background:var(--rose); border:none;
+    font-family:'Space Mono', monospace; font-size:13px; letter-spacing:0.04em; text-transform:uppercase;
+    text-decoration:none; display:flex; align-items:center;
+  }
+
+  .crisis-bar{
+    background:var(--forest); color:var(--cream); text-align:center; padding:12px;
+    font-family:'Space Mono', monospace; font-size:12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="meeting-name"><span class="rec-dot"></span>Session with Coco</div>
+  <div class="timer">29:38</div>
+</div>
+
+<div class="stage">
+  <div class="avatar-frame">
+    <div class="orb"></div>
+    <div class="caption-tag">Coco</div>
+    <div class="self-tile"><span>You</span></div>
+  </div>
+</div>
+
+<div class="caption-bar">
+  <div class="label">Coco is saying</div>
+  <p>It sounds like the tiredness isn't really about the workload — it's about <em>not having anywhere to put it down.</em> Does that feel close?</p>
+</div>
+
+<div class="controls">
+  <div class="ctrl" title="Mute">&#127908;</div>
+  <div class="ctrl off" title="Camera off">&#128247;</div>
+  <div class="ctrl" title="Chat">&#128172;</div>
+  <div class="ctrl" title="More">&#8943;</div>
+  <a class="ctrl end" href="05-session-end.html">End session</a>
+</div>
+
+<div class="crisis-bar">In crisis? Call <b>112</b> or Tele-MANAS <b>14416</b> — help is available right now, not just in session.</div>
+
+</body>
+</html>

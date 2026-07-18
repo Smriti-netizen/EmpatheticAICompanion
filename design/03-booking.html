@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coco — book a session</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F5EFE3; --cream-deep:#EDE4D2; --ink:#2A2420;
+    --rose:#9C2F45; --rose-deep:#7C2536; --forest:#33452F;
+    --dusk:#3E5C8A; --blush:#EAD9CE; --line: rgba(42,36,32,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--cream); color:var(--ink); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:20px 40px; border-bottom:1px solid var(--line);}
+  .logo{font-family:'Fraunces', serif; font-weight:500; font-size:19px; display:flex; align-items:center; gap:9px;}
+  .logo .mark{width:12px; height:12px; background:var(--rose); transform:rotate(45deg); display:inline-block;}
+  .exit{font-size:13px; color:var(--ink); opacity:0.55; text-decoration:none;}
+
+  .wrap{max-width:920px; margin:0 auto; padding:56px 24px 80px;}
+  .eyebrow{font-family:'Space Mono', monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--rose); display:flex; align-items:center; gap:8px; margin-bottom:16px;}
+  .eyebrow::before{content:''; width:7px;height:7px; background:var(--rose); transform:rotate(45deg);}
+  h1{font-family:'Fraunces', serif; font-weight:400; font-size:38px; line-height:1.15; margin-bottom:12px;}
+  h1 em{font-family:'Instrument Serif', serif; font-style:italic; color:var(--forest);}
+  .lede{font-size:15px; color:rgba(42,36,32,0.65); max-width:520px; margin-bottom:48px;}
+
+  .panel{display:grid; grid-template-columns:1.1fr 0.9fr; gap:48px;}
+
+  .field-label{font-family:'Space Mono', monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--forest); margin-bottom:16px;}
+
+  .cal{background:#fff; border:1px solid var(--line); padding:24px;}
+  .cal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+  .cal-head span{font-family:'Fraunces', serif; font-size:18px;}
+  .cal-head .nav-arrows{display:flex; gap:14px; font-family:'Space Mono', monospace; font-size:13px; color:rgba(42,36,32,0.5);}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; text-align:center;}
+  .cal-grid .dow{font-family:'Space Mono', monospace; font-size:10px; color:rgba(42,36,32,0.4); padding-bottom:6px;}
+  .cal-grid .day{
+    padding:10px 0; font-size:14px; cursor:pointer; border:1px solid transparent; color:var(--ink); border-radius:2px;
+  }
+  .cal-grid .day.muted{color:rgba(42,36,32,0.25); cursor:default;}
+  .cal-grid .day:hover:not(.muted){border-color:var(--rose);}
+  .cal-grid .day.selected{background:var(--rose); color:var(--cream);}
+
+  .slots{display:flex; flex-direction:column; gap:24px;}
+  .slot-group .part{font-family:'Space Mono', monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:rgba(42,36,32,0.5); margin-bottom:10px;}
+  .slot-list{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .slot{
+    border:1px solid var(--line); background:#fff; padding:12px 0; text-align:center; font-size:14px; cursor:pointer; transition:all .15s;
+  }
+  .slot:hover{border-color:var(--rose); color:var(--rose);}
+  .slot.selected{background:var(--forest); border-color:var(--forest); color:var(--cream);}
+  .slot.taken{color:rgba(42,36,32,0.25); text-decoration:line-through; cursor:default; background:var(--cream-deep);}
+
+  .summary{
+    margin-top:44px; background:var(--blush); padding:26px 28px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .summary .info .label{font-family:'Space Mono', monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--rose-deep); margin-bottom:6px;}
+  .summary .info .val{font-family:'Fraunces', serif; font-size:20px;}
+  .btn-primary{
+    font-family:'Space Mono', monospace; font-size:13px; letter-spacing:0.05em; text-transform:uppercase;
+    background:var(--rose); color:var(--cream); padding:15px 28px; text-decoration:none; border:none; cursor:pointer;
+  }
+
+  .crisis-bar{background:var(--forest); color:var(--cream); text-align:center; padding:14px; font-family:'Space Mono', monospace; font-size:13px;}
+  .crisis-bar b{color:#fff;}
+
+  @media (max-width:760px){ .panel{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><span class="mark"></span>Coco</div>
+  <a class="exit" href="01-landing.html">Back home</a>
+</div>
+
+<div class="wrap">
+  <div class="eyebrow">Book a session</div>
+  <h1>Pick a time that <em>works for you.</em></h1>
+  <p class="lede">Sessions are 45 minutes, one-on-one with Coco. Reschedule or cancel anytime before it starts, no explanation needed.</p>
+
+  <div class="panel">
+    <div>
+      <div class="field-label">Choose a day</div>
+      <div class="cal">
+        <div class="cal-head">
+          <span>July 2026</span>
+          <div class="nav-arrows"><span>&larr;</span><span>&rarr;</span></div>
+        </div>
+        <div class="cal-grid">
+          <div class="dow">S</div><div class="dow">M</div><div class="dow">T</div><div class="dow">W</div><div class="dow">T</div><div class="dow">F</div><div class="dow">S</div>
+          <div class="day muted">28</div><div class="day muted">29</div><div class="day muted">30</div><div class="day">1</div><div class="day">2</div><div class="day">3</div><div class="day">4</div>
+          <div class="day">5</div><div class="day">6</div><div class="day">7</div><div class="day">8</div><div class="day">9</div><div class="day">10</div><div class="day">11</div>
+          <div class="day">12</div><div class="day">13</div><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day selected">18</div>
+          <div class="day">19</div><div class="day">20</div><div class="day">21</div><div class="day">22</div><div class="day">23</div><div class="day">24</div><div class="day">25</div>
+          <div class="day">26</div><div class="day">27</div><div class="day">28</div><div class="day">29</div><div class="day">30</div><div class="day">31</div><div class="day muted">1</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="field-label">Choose a time — Sat, 18 Jul</div>
+      <div class="slots">
+        <div class="slot-group">
+          <div class="part">Morning</div>
+          <div class="slot-list">
+            <div class="slot taken">9:00 am</div>
+            <div class="slot">9:45 am</div>
+            <div class="slot selected">10:30 am</div>
+            <div class="slot">11:15 am</div>
+          </div>
+        </div>
+        <div class="slot-group">
+          <div class="part">Evening</div>
+          <div class="slot-list">
+            <div class="slot">6:00 pm</div>
+            <div class="slot">6:45 pm</div>
+            <div class="slot">7:30 pm</div>
+            <div class="slot taken">8:15 pm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="info">
+      <div class="label">Your session</div>
+      <div class="val">Sat, 18 Jul &nbsp;·&nbsp; 10:30 am &nbsp;·&nbsp; 45 min</div>
+    </div>
+    <a class="btn-primary" href="04-session.html">Confirm booking</a>
+  </div>
+</div>
+
+<div class="crisis-bar">In crisis? Call <b>112</b> or Tele-MANAS <b>14416</b> — don't wait for a scheduled session.</div>
+
+</body>
+</html>

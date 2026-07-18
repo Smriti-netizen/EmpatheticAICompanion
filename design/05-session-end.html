@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coco — session complete</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F5EFE3; --ink:#2A2420; --rose:#9C2F45; --rose-deep:#7C2536;
+    --forest:#33452F; --dusk:#3E5C8A; --blush:#EAD9CE; --line: rgba(42,36,32,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--cream); color:var(--ink); font-family:'Inter', sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; -webkit-font-smoothing:antialiased;
+  }
+  .mark-row{display:flex; gap:8px; margin-bottom:28px;}
+  .mark-row span{width:8px; height:8px; background:var(--rose); transform:rotate(45deg); display:inline-block; opacity:0.8;}
+  .mark-row span:nth-child(2){background:var(--forest);}
+  .mark-row span:nth-child(3){background:var(--dusk);}
+
+  h1{font-family:'Fraunces', serif; font-weight:400; font-size:38px; max-width:520px; line-height:1.2;}
+  h1 em{font-family:'Instrument Serif', serif; font-style:italic; color:var(--rose);}
+  p.sub{margin-top:16px; font-size:15px; color:rgba(42,36,32,0.65); max-width:420px;}
+
+  .actions{margin-top:40px; display:flex; gap:16px;}
+  .btn-primary{
+    font-family:'Space Mono', monospace; font-size:13px; letter-spacing:0.05em; text-transform:uppercase;
+    background:var(--forest); color:var(--cream); padding:15px 26px; text-decoration:none; border:1px solid var(--forest);
+  }
+  .btn-secondary{
+    font-family:'Space Mono', monospace; font-size:13px; letter-spacing:0.05em; text-transform:uppercase;
+    color:var(--ink); padding:15px 26px; text-decoration:none; border:1px solid var(--line);
+  }
+
+  .crisis-bar{
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--forest); color:var(--cream); text-align:center; padding:14px;
+    font-family:'Space Mono', monospace; font-size:12px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="mark-row"><span></span><span></span><span></span></div>
+  <h1>You've had a <em>gentle</em> session.</h1>
+  <p class="sub">Take your time before you go back to the rest of your day. Coco will be here whenever you need to talk again.</p>
+
+  <div class="actions">
+    <a class="btn-primary" href="03-booking.html">Book next session</a>
+    <a class="btn-secondary" href="01-landing.html">Exit to home</a>
+  </div>
+
+  <div class="crisis-bar">In crisis? Call <b>112</b> or Tele-MANAS <b>14416</b> — Coco isn't a substitute for emergency care.</div>
+
+</body>
+</html>

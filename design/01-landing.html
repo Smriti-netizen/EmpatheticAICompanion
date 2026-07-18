@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Coco — a space to say it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F5EFE3;
+    --cream-deep:#EDE4D2;
+    --ink:#2A2420;
+    --rose:#9C2F45;
+    --rose-deep:#7C2536;
+    --forest:#33452F;
+    --dusk:#3E5C8A;
+    --blush:#EAD9CE;
+    --line: rgba(42,36,32,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1200px; margin:0 auto; padding:0 48px;}
+  header.nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:32px 48px; max-width:1200px; margin:0 auto;
+  }
+  .logo{
+    font-family:'Fraunces', serif; font-weight:500; font-size:22px; letter-spacing:0.5px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .logo .mark{width:14px; height:14px; background:var(--rose); transform:rotate(45deg); display:inline-block;}
+  nav.links{display:flex; gap:36px; font-size:13px; letter-spacing:0.06em; text-transform:uppercase; font-family:'Space Mono', monospace;}
+  nav.links a{color:var(--ink); text-decoration:none; opacity:0.65; transition:opacity .2s;}
+  nav.links a:hover{opacity:1;}
+  .cta-nav{
+    font-family:'Space Mono', monospace; font-size:13px; text-transform:uppercase; letter-spacing:0.06em;
+    background:var(--ink); color:var(--cream); padding:10px 20px; text-decoration:none;
+  }
+
+  /* HERO */
+  .hero{
+    max-width:1200px; margin:0 auto; padding:60px 48px 40px;
+    display:grid; grid-template-columns:1.1fr 0.9fr; gap:40px; align-items:center;
+  }
+  .eyebrow{
+    font-family:'Space Mono', monospace; font-size:13px; letter-spacing:0.18em;
+    color:var(--rose); text-transform:uppercase; margin-bottom:22px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:''; width:8px;height:8px; background:var(--rose); transform:rotate(45deg); display:inline-block;}
+  h1{
+    font-family:'Fraunces', serif; font-weight:400; font-size:64px; line-height:1.04;
+    letter-spacing:-0.01em; color:var(--ink);
+  }
+  h1 em{font-family:'Instrument Serif', serif; font-style:italic; color:var(--rose); font-weight:400;}
+  .sub{
+    margin-top:26px; font-size:18px; line-height:1.6; color:rgba(42,36,32,0.78); max-width:440px;
+  }
+  .hero-actions{margin-top:36px; display:flex; align-items:center; gap:24px;}
+  .btn-primary{
+    font-family:'Space Mono', monospace; font-size:14px; letter-spacing:0.05em; text-transform:uppercase;
+    background:var(--rose); color:var(--cream); padding:16px 30px; text-decoration:none;
+    border:1px solid var(--rose); transition:background .2s;
+  }
+  .btn-primary:hover{background:var(--rose-deep);}
+  .btn-ghost{font-size:14px; color:var(--ink); text-decoration:underline; text-underline-offset:4px; opacity:0.7;}
+
+  /* Signature flower — half botanical / half digital */
+  .signature{position:relative; width:100%; aspect-ratio:1/1.15;}
+  .signature svg{width:100%; height:100%;}
+
+  /* Trust row */
+  .trust{
+    max-width:1200px; margin:20px auto 0; padding:38px 48px;
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    display:grid; grid-template-columns:repeat(3,1fr);
+  }
+  .trust-item{padding:0 28px; position:relative;}
+  .trust-item:not(:first-child)::before{
+    content:''; position:absolute; left:0; top:6px; bottom:6px; width:1px; background:var(--line);
+  }
+  .trust-item .t-label{
+    font-family:'Space Mono', monospace; font-size:12px; letter-spacing:0.1em; text-transform:uppercase; color:var(--rose);
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .trust-item .t-label::before{content:''; width:6px;height:6px; background:var(--rose); transform:rotate(45deg);}
+  .trust-item p{font-size:15px; line-height:1.55; color:rgba(42,36,32,0.75);}
+
+  /* Quote / feel section, echoing image 1's poster copy style */
+  .feel{
+    max-width:1200px; margin:0 auto; padding:90px 48px;
+    display:grid; grid-template-columns:0.5fr 1fr; gap:60px; align-items:start;
+  }
+  .feel .label{
+    font-family:'Space Mono', monospace; font-size:13px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--forest); writing-mode:vertical-rl; text-orientation:mixed;
+  }
+  .feel blockquote{
+    font-family:'Fraunces', serif; font-weight:300; font-size:34px; line-height:1.4; color:var(--ink);
+  }
+  .feel blockquote em{font-family:'Instrument Serif', serif; font-style:italic; color:var(--forest);}
+  .feel .attribution{margin-top:24px; font-size:14px; color:rgba(42,36,32,0.55);}
+
+  /* How it works — real sequence, numbering justified */
+  .how{background:var(--blush); padding:90px 0;}
+  .how-inner{max-width:1200px; margin:0 auto; padding:0 48px;}
+  .how h2{font-family:'Fraunces', serif; font-weight:400; font-size:36px; margin-bottom:56px;}
+  .how h2 em{font-family:'Instrument Serif', serif; font-style:italic; color:var(--rose);}
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:36px;}
+  .step .num{font-family:'Space Mono', monospace; font-size:13px; color:var(--rose); margin-bottom:16px;}
+  .step h3{font-family:'Fraunces', serif; font-weight:500; font-size:21px; margin-bottom:10px;}
+  .step p{font-size:15px; line-height:1.6; color:rgba(42,36,32,0.72);}
+
+  footer{
+    max-width:1200px; margin:0 auto; padding:56px 48px 40px;
+    display:flex; justify-content:space-between; align-items:flex-end;
+  }
+  footer .fmark{font-family:'Fraunces', serif; font-size:20px;}
+  .crisis-bar{
+    background:var(--forest); color:var(--cream); text-align:center; padding:14px;
+    font-family:'Space Mono', monospace; font-size:13px; letter-spacing:0.04em;
+  }
+  .crisis-bar b{color:#fff;}
+
+  @media (max-width:860px){
+    .hero{grid-template-columns:1fr; padding-top:20px;}
+    h1{font-size:44px;}
+    .trust{grid-template-columns:1fr; gap:24px;}
+    .trust-item::before{display:none;}
+    .feel{grid-template-columns:1fr; gap:24px;}
+    .feel .label{writing-mode:horizontal-tb;}
+    .steps{grid-template-columns:1fr;}
+    nav.links{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="logo"><span class="mark"></span>Coco</div>
+  <nav class="links">
+    <a href="#">How it works</a>
+    <a href="#">Privacy</a>
+    <a href="#">About</a>
+  </nav>
+  <a class="cta-nav" href="02-questionnaire.html">Start talking</a>
+</header>
+
+<section class="hero">
+  <div>
+    <div class="eyebrow">Meet Coco</div>
+    <h1>Say what's<br>actually on<br>your <em>mind.</em></h1>
+    <p class="sub">A private space to express yourself — no judgement, no waiting room. Coco is here any hour, day or night.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="02-questionnaire.html">Start talking</a>
+      <a class="btn-ghost" href="03-booking.html">or book a session</a>
+    </div>
+  </div>
+  <div class="signature">
+    <!-- half hand-drawn botanical / half dissolving into a digital grid -->
+    <svg viewBox="0 0 480 560" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="leftHalf"><rect x="0" y="0" width="240" height="560"/></clipPath>
+      </defs>
+      <!-- stem -->
+      <path d="M240 560 C 236 420, 250 340, 232 220" stroke="#33452F" stroke-width="3" fill="none"/>
+      <path d="M232 220 C 210 200, 190 205, 178 190" stroke="#33452F" stroke-width="2.5" fill="none"/>
+      <path d="M236 300 C 210 290, 195 300, 182 320" stroke="#33452F" stroke-width="2.5" fill="none"/>
+      <!-- leaves -->
+      <ellipse cx="178" cy="180" rx="22" ry="10" fill="#4a5f43" transform="rotate(-30 178 180)"/>
+      <ellipse cx="180" cy="325" rx="26" ry="11" fill="#4a5f43" transform="rotate(20 180 325)"/>
+
+      <!-- LEFT organic petals -->
+      <g clip-path="url(#leftHalf)">
+        <circle cx="230" cy="150" r="70" fill="#9C2F45" opacity="0.92"/>
+        <ellipse cx="185" cy="115" rx="46" ry="60" fill="#C1637A" opacity="0.9" transform="rotate(-18 185 115)"/>
+        <ellipse cx="180" cy="185" rx="42" ry="56" fill="#B8546C" opacity="0.9" transform="rotate(24 180 185)"/>
+        <ellipse cx="240" cy="90" rx="40" ry="52" fill="#D98BA0" opacity="0.85" transform="rotate(4 240 90)"/>
+        <circle cx="222" cy="150" r="16" fill="#E8B84B"/>
+        <circle cx="222" cy="150" r="16" fill="none" stroke="#7C2536" stroke-width="1"/>
+      </g>
+
+      <!-- RIGHT half: same flower dissolving into a pixel / ascii grid -->
+      <g>
+        <!-- fading petal remnants -->
+        <ellipse cx="270" cy="90" rx="34" ry="46" fill="#D98BA0" opacity="0.35" transform="rotate(4 270 90)"/>
+        <ellipse cx="292" cy="150" rx="10" ry="10" fill="#9C2F45" opacity="0.25"/>
+
+        <!-- pixel grid dissolve, generated as a simple lattice -->
+        <g fill="#3E5C8A">
+          <rect x="248" y="70" width="10" height="10" opacity="0.8"/>
+          <rect x="266" y="60" width="10" height="10" opacity="0.6"/>
+          <rect x="284" y="76" width="10" height="10" opacity="0.7"/>
+          <rect x="300" y="64" width="10" height="10" opacity="0.4"/>
+          <rect x="258" y="94" width="10" height="10" opacity="0.9"/>
+          <rect x="278" y="100" width="10" height="10" opacity="0.5"/>
+          <rect x="296" y="92" width="10" height="10" opacity="0.65"/>
+          <rect x="314" y="106" width="10" height="10" opacity="0.35"/>
+          <rect x="250" y="120" width="10" height="10" opacity="0.7"/>
+          <rect x="270" y="128" width="10" height="10" opacity="0.55"/>
+          <rect x="290" y="122" width="10" height="10" opacity="0.8"/>
+          <rect x="310" y="136" width="10" height="10" opacity="0.3"/>
+          <rect x="330" y="118" width="10" height="10" opacity="0.5"/>
+          <rect x="260" y="150" width="10" height="10" opacity="0.6"/>
+          <rect x="280" y="158" width="10" height="10" opacity="0.4"/>
+          <rect x="300" y="150" width="10" height="10" opacity="0.75"/>
+          <rect x="320" y="164" width="10" height="10" opacity="0.3"/>
+          <rect x="340" y="146" width="10" height="10" opacity="0.45"/>
+          <rect x="252" y="180" width="10" height="10" opacity="0.5"/>
+          <rect x="272" y="188" width="10" height="10" opacity="0.35"/>
+          <rect x="292" y="180" width="10" height="10" opacity="0.6"/>
+          <rect x="312" y="194" width="10" height="10" opacity="0.25"/>
+          <rect x="264" y="210" width="10" height="10" opacity="0.4"/>
+          <rect x="284" y="216" width="10" height="10" opacity="0.28"/>
+          <rect x="304" y="208" width="10" height="10" opacity="0.5"/>
+        </g>
+        <g fill="none" stroke="#3E5C8A" stroke-width="1">
+          <circle cx="330" cy="80" r="4" opacity="0.5"/>
+          <circle cx="350" cy="110" r="4" opacity="0.4"/>
+          <circle cx="360" cy="150" r="4" opacity="0.35"/>
+          <circle cx="345" cy="190" r="4" opacity="0.3"/>
+          <circle cx="320" cy="230" r="4" opacity="0.25"/>
+        </g>
+      </g>
+
+      <!-- small diamond bullets scattered, echoing poster 1 -->
+      <rect x="60" y="60" width="9" height="9" fill="#9C2F45" transform="rotate(45 64 64)" opacity="0.7"/>
+      <rect x="400" y="440" width="7" height="7" fill="#33452F" transform="rotate(45 403 443)" opacity="0.6"/>
+    </svg>
+  </div>
+</section>
+
+<div class="trust">
+  <div class="trust-item">
+    <div class="t-label">Private</div>
+    <p>Nothing you say here is shared. Conversations stay between you and Coco.</p>
+  </div>
+  <div class="trust-item">
+    <div class="t-label">Judgement-free</div>
+    <p>Say it messily, say it half-formed. Coco isn't here to correct you — only to listen.</p>
+  </div>
+  <div class="trust-item">
+    <div class="t-label">Always here</div>
+    <p>3am or 3pm, Coco doesn't have office hours. Start a conversation whenever you need to.</p>
+  </div>
+</div>
+
+<section class="feel">
+  <div class="label">WHAT THIS IS</div>
+  <div>
+    <blockquote>Not a chatbot pretending to be a friend. Not a form pretending to <em>care.</em> Just somewhere to put it down, for once.</blockquote>
+    <div class="attribution">— the whole idea, really</div>
+  </div>
+</section>
+
+<div class="how">
+  <div class="how-inner">
+    <h2>Three steps, <em>no waiting room.</em></h2>
+    <div class="steps">
+      <div class="step">
+        <div class="num">01</div>
+        <h3>Tell Coco what's going on</h3>
+        <p>A short, conversational check-in — nothing that feels like a form.</p>
+      </div>
+      <div class="step">
+        <div class="num">02</div>
+        <h3>Book a session, or start now</h3>
+        <p>Pick a time that suits you, or jump straight into a live conversation.</p>
+      </div>
+      <div class="step">
+        <div class="num">03</div>
+        <h3>Talk it through</h3>
+        <p>A calm, one-on-one session, at your pace, for as long as you need.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="fmark">Coco</div>
+  <div style="font-family:'Space Mono',monospace; font-size:13px; opacity:0.6;">designed for the quiet hours</div>
+</footer>
+
+<div class="crisis-bar">In crisis? Call <b>112</b> or Tele-MANAS <b>14416</b> — Coco isn't a substitute for emergency care.</div>
+
+</body>
+</html>
