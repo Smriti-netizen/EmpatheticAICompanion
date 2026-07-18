@@ -32,12 +32,18 @@ export interface SessionChatResponse {
   remaining_sec: number;
   audio_base64?: string | null;
   audio_mime?: string;
+  avatar_id?: string | null;
+  locale?: string | null;
+  tts_voice?: string | null;
 }
 
 export interface SessionVoiceResponse extends SessionChatResponse {
   transcript: string;
   audio_base64: string | null;
   audio_mime: string;
+  /** True when mic caught silence — UI should stay on Listening. */
+  empty?: boolean;
+  remaining_sec?: number | null;
 }
 
 export interface SessionStartResponse {
@@ -47,6 +53,9 @@ export interface SessionStartResponse {
   clinical_context_loaded?: boolean;
   audio_base64?: string | null;
   audio_mime?: string;
+  avatar_id?: string | null;
+  locale?: string | null;
+  tts_voice?: string | null;
 }
 
 export interface CloseSessionResponse {

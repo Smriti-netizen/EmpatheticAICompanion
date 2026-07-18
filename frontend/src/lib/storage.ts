@@ -1,7 +1,10 @@
+import { normalizeLocale, type SessionLocale } from "./locales";
+
 const USER_ID_KEY = "empathic.user_id";
 const CONSENT_KEY = "empathic.consent.accepted";
 const DISPLAY_NAME_KEY = "empathic.display_name";
 const AVATAR_KEY = "empathic.avatar_id";
+const LOCALE_KEY = "empathic.locale";
 
 export function getUserId(): string | null {
   try {
@@ -37,6 +40,18 @@ export function getAvatarId(): string {
 
 export function setAvatarId(avatarId: string): void {
   localStorage.setItem(AVATAR_KEY, avatarId);
+}
+
+export function getLocale(): SessionLocale {
+  try {
+    return normalizeLocale(localStorage.getItem(LOCALE_KEY));
+  } catch {
+    return "en-IN";
+  }
+}
+
+export function setLocale(locale: string): void {
+  localStorage.setItem(LOCALE_KEY, normalizeLocale(locale));
 }
 
 export function hasConsent(): boolean {
