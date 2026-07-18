@@ -119,7 +119,7 @@ export function IntakePage() {
         type="button"
         disabled={loading}
         onClick={() => void submit()}
-        className="mt-8 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+        className="mt-8 rounded-full bg-rose px-9 py-4 font-sans text-[12px] font-medium text-cream not-italic transition hover:bg-rose-deep disabled:opacity-50"
       >
         {loading ? "Saving…" : "Continue"}
       </button>

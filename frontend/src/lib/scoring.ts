@@ -23,7 +23,7 @@ export const PHQ9_ITEMS = [
   "Trouble falling or staying asleep, or sleeping too much",
   "Feeling tired or having little energy",
   "Poor appetite or overeating",
-  "Feeling bad about yourself — or that you are a failure",
+  "Feeling bad about yourself, or that you are a failure",
   "Trouble concentrating on things",
   "Moving or speaking slowly / being fidgety or restless",
   "Thoughts that you would be better off dead, or of hurting yourself",

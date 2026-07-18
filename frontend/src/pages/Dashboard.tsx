@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiClientError } from "../api/client";
-import { getUserId } from "../lib/storage";
+import { getAvatarId, getLocale, getUserId } from "../lib/storage";
 import type { Booking } from "../types";
 
 function withinJoinWindow(slotStart: string): boolean {
@@ -80,7 +80,15 @@ export function DashboardPage() {
     const userId = getUserId();
     if (!userId) return;
     try {
-      const session = await api.createPracticeSession(userId);
+      const avatarId = getAvatarId();
+      const locale = getLocale();
+      // Keep DB voice prefs in sync with the companion shown in the UI.
+      try {
+        await api.setAvatar(userId, avatarId, locale);
+      } catch {
+        // Still start — startSession also syncs avatar_id.
+      }
+      const session = await api.createPracticeSession(userId, { avatarId, locale });
       navigate(`/session/${session.session_id}`);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Could not start");
@@ -89,9 +97,18 @@ export function DashboardPage() {
 
   return (
     <div className="mx-auto min-h-screen max-w-2xl px-5 py-12">
-      <p className="text-[11px] font-semibold tracking-[0.28em] text-muted uppercase">
-        Your field guide
-      </p>
+      <div className="mb-6 flex items-center justify-between">
+        <p className="text-[11px] font-semibold tracking-[0.28em] text-muted uppercase">
+          Your field guide
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="text-[13px] font-medium text-ink/60 underline underline-offset-4 transition hover:text-ink"
+        >
+          Home
+        </button>
+      </div>
       <h1 className="mt-1 font-display text-4xl font-semibold text-ink">
         Your sessions
       </h1>
@@ -128,8 +145,8 @@ export function DashboardPage() {
           <div className="flex flex-col items-center gap-3 rounded-3xl border border-line bg-surface px-5 py-10 text-center shadow-warm-sm">
             <SpecimenIcon index={1} />
             <p className="max-w-xs text-sm text-muted">
-              Nothing scheduled yet — your guide fills in as you go. Start whenever
-              you're ready.
+              Nothing scheduled yet. Your guide fills in as you go, so start
+              whenever you're ready.
             </p>
           </div>
         )}

@@ -41,8 +41,8 @@ export function ConsentPage() {
     <div className="mx-auto min-h-screen max-w-xl px-4 py-10">
       <h1 className="font-display text-4xl font-semibold text-ink">Consent</h1>
       <p className="mt-3 text-sm leading-relaxed text-muted">
-        This is an AI counselor for support. It does not provide medical diagnosis or
-        prescriptions. If you are in crisis, contact Tele-MANAS 14416 / 112.
+        This is an AI companion for support. It doesn't provide medical diagnosis
+        or prescriptions.
       </p>
 
       <label className="mt-6 block text-sm font-medium">
@@ -83,7 +83,7 @@ export function ConsentPage() {
         type="button"
         disabled={!accepted || !name.trim() || loading}
         onClick={() => void continueIntake()}
-        className="mt-8 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+        className="mt-8 rounded-full bg-rose px-9 py-4 font-sans text-[12px] font-medium text-cream not-italic transition hover:bg-rose-deep disabled:opacity-50"
       >
         {loading ? "Saving…" : "Continue to intake"}
       </button>

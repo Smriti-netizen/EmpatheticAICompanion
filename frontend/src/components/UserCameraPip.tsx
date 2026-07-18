@@ -4,11 +4,11 @@ interface UserCameraPipProps {
   onToggle: () => void;
 }
 
-/** Zoom-style self-view — bottom-right of the call stage. */
+/** Zoom-style self-view — top-right on phones so captions stay clear; bottom-right on larger screens. */
 export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProps) {
   return (
-    <div className="absolute right-3 bottom-3 z-20 sm:right-5 sm:bottom-5">
-      <div className="relative h-28 w-40 overflow-hidden rounded-2xl border-2 border-white/80 bg-ink shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)] sm:h-36 sm:w-52">
+    <div className="absolute top-2 right-2 z-20 sm:top-auto sm:right-4 sm:bottom-4 md:right-5 md:bottom-5">
+      <div className="relative h-20 w-[7.25rem] overflow-hidden rounded-[4px] border border-cream/20 bg-[#2b2622] sm:h-28 sm:w-40 md:h-32 md:w-44">
         <video
           ref={videoRef}
           muted
@@ -17,7 +17,7 @@ export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProp
           className={`h-full w-full object-cover ${enabled ? "" : "hidden"}`}
         />
         {!enabled && (
-          <div className="grid h-full place-items-center bg-[#1c2b2a]/90 px-3 text-center text-xs text-white/80">
+          <div className="grid h-full place-items-center bg-[#2b2622] px-2 text-center font-mono text-[10px] tracking-[0.05em] text-cream/55 uppercase sm:px-3 sm:text-[11px]">
             Camera off
           </div>
         )}
@@ -26,9 +26,9 @@ export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProp
           onClick={onToggle}
           aria-pressed={enabled}
           aria-label={enabled ? "Turn camera off" : "Turn camera on"}
-          className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur"
+          className="absolute bottom-1.5 left-1.5 bg-ink/70 px-2 py-0.5 font-mono text-[9px] tracking-[0.05em] text-cream uppercase backdrop-blur sm:bottom-2 sm:left-2 sm:px-2.5 sm:py-1 sm:text-[10px]"
         >
-          {enabled ? "Turn off" : "Turn on"}
+          {enabled ? "Off" : "On"}
         </button>
       </div>
     </div>

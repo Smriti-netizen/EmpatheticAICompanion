@@ -113,7 +113,7 @@ function BloomWipe() {
 function RoutedPages() {
   const location = useLocation();
   return (
-    <div key={location.pathname} className="page-in">
+    <div key={location.pathname}>
       <Routes location={location}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/onboarding" element={<OnboardingChatPage />} />

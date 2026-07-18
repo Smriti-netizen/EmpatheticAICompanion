@@ -8,12 +8,12 @@ export function SessionTimer({ remainingSec }: SessionTimerProps) {
   const urgent = remainingSec <= 300;
 
   return (
-    <div
-      className={`rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide ${
-        urgent ? "bg-crisis-bg text-crisis" : "bg-accent-soft text-accent"
+    <span
+      className={`font-mono text-[13px] tracking-[0.06em] ${
+        urgent ? "text-rose" : "text-cream/60"
       }`}
     >
       {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-    </div>
+    </span>
   );
 }
