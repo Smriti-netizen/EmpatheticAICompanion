@@ -55,15 +55,37 @@ def ensure_ready() -> str:
     return _status
 
 
-def transcribe(file_path: Path) -> str:
+def _resolve_language(locale: str | None) -> str | None:
+    """Pick Whisper language. Prefer auto so Hinglish / code-switch is heard.
+
+    English-only models (*.en) cannot take a language hint.
+    Session locale is only a soft hint when WHISPER_LANGUAGE is not auto —
+    never force English when the user may speak Hindi mid-session.
+    """
+    if settings.whisper_model.endswith(".en"):
+        logger.warning(
+            "Whisper model %s is English-only — Hindi/Hinglish will not transcribe. "
+            "Set WHISPER_MODEL=small (or base) and WHISPER_LANGUAGE=auto.",
+            settings.whisper_model,
+        )
+        return None
+
+    cfg = (settings.whisper_language or "").strip().lower()
+    if cfg in ("", "auto"):
+        # Auto-detect every utterance — English session + Hindi speech works.
+        return None
+    if cfg == "locale" and locale:
+        return locale.replace("_", "-").split("-", 1)[0].lower() or None
+    return cfg
+
+
+def transcribe(file_path: Path, locale: str | None = None) -> str:
     if ensure_ready() != "ready" or _model is None:
         raise RuntimeError(
             f"Whisper is not available on this machine. {_last_error or ''}".strip()
         )
-    # English-only models reject the language kwarg; guard it.
-    language = None if settings.whisper_model.endswith(".en") else (
-        settings.whisper_language or None
-    )
+
+    language = _resolve_language(locale)
     import time
 
     start = time.perf_counter()
@@ -71,16 +93,22 @@ def transcribe(file_path: Path) -> str:
         str(file_path),
         language=language,
         beam_size=max(1, settings.whisper_beam_size),
-        vad_filter=True,  # drop silence → faster + fewer hallucinations
-        vad_parameters={"min_silence_duration_ms": 300},
+        vad_filter=True,
+        vad_parameters={"min_silence_duration_ms": 250},
         condition_on_previous_text=False,
-        no_speech_threshold=0.5,
+        # Drop soft noise / empty mics quickly instead of forcing a transcript.
+        no_speech_threshold=0.6,
+        # Helps mixed English–Indic utterances stay coherent.
+        multilingual=not settings.whisper_model.endswith(".en"),
     )
     text = " ".join(segment.text.strip() for segment in segments).strip()
+    detected = getattr(info, "language", None)
     logger.info(
-        "Transcribed %.2fs audio in %.2fs → %d chars",
+        "Transcribed %.2fs audio in %.2fs → %d chars (lang=%s detected=%s)",
         getattr(info, "duration", 0.0),
         time.perf_counter() - start,
         len(text),
+        language or "auto",
+        detected,
     )
     return text
