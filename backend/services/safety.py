@@ -50,8 +50,13 @@ OUTPUT_BLOCK = [
 MODEL_GATHER_FALLBACK = "I want to say this right — give me a moment."
 
 _REPEATED_CHAR = re.compile(r"(.)\1{6,}")  # same char 7+ times in a row
-_SYMBOL_RUN = re.compile(r"[^\w\s]{5,}")  # long run of punctuation/symbols
-_REAL_WORD = re.compile(r"[A-Za-z]{2,}")
+_SYMBOL_RUN = re.compile(r"[^\w\s]{5,}", re.UNICODE)  # long run of punctuation/symbols
+# Latin OR Indic scripts (Hindi/Bengali/Tamil/etc.) — pure Hindi must not look "malformed".
+_REAL_WORD = re.compile(
+    r"[A-Za-z]{2,}|[\u0900-\u097F]{2,}|[\u0980-\u09FF]{2,}|"
+    r"[\u0A80-\u0AFF]{2,}|[\u0B80-\u0BFF]{2,}|[\u0C00-\u0C7F]{2,}|"
+    r"[\u0C80-\u0CFF]{2,}|[\u0D00-\u0D7F]{2,}"
+)
 
 
 def looks_malformed(text: str) -> bool:
