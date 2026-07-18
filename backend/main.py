@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from db.session import init_db
-from routers import bookings, chat, crisis, health, intake, sessions, users, voice
+from routers import admin, bookings, chat, crisis, health, intake, sessions, users, voice
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +32,7 @@ app.include_router(bookings.router)
 app.include_router(sessions.router)
 app.include_router(voice.router)
 app.include_router(chat.router)
+app.include_router(admin.router)
 
 
 @app.on_event("startup")
