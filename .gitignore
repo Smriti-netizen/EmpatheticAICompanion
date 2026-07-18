@@ -9,3 +9,13 @@ models/*.onnx
 __pycache__/
 *.pyc
 .DS_Store
+
+# Local understanding notes (not for GitHub)
+PROJECT.md
+PROJECT.html
+PROJECT.pdf
+backend_8001.*.log
+backend/_ziggy_voice_test.mp3
+.cursor/
+backend/data/*.db-shm
+backend/data/*.db-wal
