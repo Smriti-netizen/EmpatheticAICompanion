@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import settings
@@ -11,9 +11,22 @@ Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 
 engine = create_engine(
     f"sqlite:///{settings.db_path}",
-    connect_args={"check_same_thread": False},
+    connect_args={
+        "check_same_thread": False,
+        # Avoid "database is locked" under concurrent voice + chat + avatar sync.
+        "timeout": 30,
+    },
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+@event.listens_for(engine, "connect")
+def _sqlite_on_connect(dbapi_connection, _connection_record) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=30000")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
 
 
 def _migrate_sqlite() -> None:
