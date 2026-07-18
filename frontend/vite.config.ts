@@ -7,4 +7,9 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  // onnxruntime-web WASM must not be prebundled — VAD loads it from CDN.
+  optimizeDeps: {
+    exclude: ["onnxruntime-web", "@ricky0123/vad-web"],
+  },
+  assetsInclude: ["**/*.onnx", "**/*.wasm"],
 });

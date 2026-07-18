@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { MicVAD } from "@ricky0123/vad-web";
 
 import { float32ToWavBlob } from "../../lib/wav";
 
@@ -7,21 +6,32 @@ type Phase = "idle" | "listening" | "user_speaking" | "processing";
 
 interface UseVadVoiceLoopArgs {
   active: boolean;
-  /** Prefer server Whisper path when true. */
   enabled: boolean;
   onAudio: (blob: Blob) => Promise<void>;
+  onInitFailed?: (message: string) => void;
 }
 
+const ORT_WASM_CDN =
+  "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
+const VAD_ASSET_CDN =
+  "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.30/dist/";
+
 /**
- * Silero VAD (client ONNX) → onSpeechEnd → WAV blob → server Whisper/Piper.
- * Real endpointing: fires when the user actually stops talking.
+ * Silero VAD — dynamically imported so onnxruntime never crashes the landing page.
  */
-export function useVadVoiceLoop({ active, enabled, onAudio }: UseVadVoiceLoopArgs) {
+export function useVadVoiceLoop({
+  active,
+  enabled,
+  onAudio,
+  onInitFailed,
+}: UseVadVoiceLoopArgs) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
 
   const onAudioRef = useRef(onAudio);
   onAudioRef.current = onAudio;
+  const onInitFailedRef = useRef(onInitFailed);
+  onInitFailedRef.current = onInitFailed;
   const processingRef = useRef(false);
 
   useEffect(() => {
@@ -31,13 +41,18 @@ export function useVadVoiceLoop({ active, enabled, onAudio }: UseVadVoiceLoopArg
     }
 
     let cancelled = false;
-    let vad: Awaited<ReturnType<typeof MicVAD.new>> | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let vad: any = null;
 
     async function boot() {
       setError(null);
       try {
+        const { MicVAD } = await import("@ricky0123/vad-web");
+        if (cancelled) return;
+
         vad = await MicVAD.new({
-          // CDN defaults for worklet/onnx/wasm — works with Vite without copy plugin.
+          baseAssetPath: VAD_ASSET_CDN,
+          onnxWASMBasePath: ORT_WASM_CDN,
           onSpeechStart: () => {
             if (!cancelled && !processingRef.current) setPhase("user_speaking");
           },
@@ -60,13 +75,14 @@ export function useVadVoiceLoop({ active, enabled, onAudio }: UseVadVoiceLoopArg
         vad.start();
         setPhase("listening");
       } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Could not start voice detection. Allow mic, or use Type instead.";
         if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Could not start voice detection. Allow mic, or use Type instead.",
-          );
+          setError(message);
           setPhase("idle");
+          onInitFailedRef.current?.(message);
         }
       }
     }
@@ -74,7 +90,6 @@ export function useVadVoiceLoop({ active, enabled, onAudio }: UseVadVoiceLoopArg
     async function handleSpeechEnd(audio: Float32Array) {
       if (processingRef.current || cancelled) return;
       if (audio.length < 1600) {
-        // < ~100ms — ignore
         setPhase("listening");
         return;
       }

@@ -32,7 +32,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch {
     throw new ApiClientError(
-      "Cannot reach the API. Is the backend running on port 8000?",
+      `Cannot reach the API at ${appConfig.apiBaseUrl}. Is the backend running?`,
     );
   }
 
@@ -167,6 +167,7 @@ export const api = {
       api: string;
       model_loaded: boolean;
       whisper: string;
+      whisper_error?: string | null;
       piper: string;
       tts?: string;
       tts_engine?: string;
