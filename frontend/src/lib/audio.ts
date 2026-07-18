@@ -1,4 +1,4 @@
-/** Record mic audio and play counselor replies. */
+import type { AvatarId } from "../features/avatar/avatarCatalog";
 
 export function pickMimeType(): string {
   const candidates = [
@@ -10,20 +10,34 @@ export function pickMimeType(): string {
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
 }
 
-export async function playBase64Audio(
-  audioBase64: string,
-  mime = "audio/wav",
-  onEnded?: () => void,
-): Promise<HTMLAudioElement> {
+function base64ToBytes(audioBase64: string): Uint8Array {
   const binary = atob(audioBase64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i);
   }
-  const blob = new Blob([bytes], { type: mime });
+  return bytes;
+}
+
+export async function playBase64Audio(
+  audioBase64: string,
+  mime = "audio/wav",
+  onEnded?: () => void,
+): Promise<HTMLAudioElement> {
+  const bytes = base64ToBytes(audioBase64);
+  // Copy into a fresh Uint8Array so BlobPart typing accepts ArrayBuffer (not SharedArrayBuffer).
+  const blob = new Blob([new Uint8Array(bytes)], { type: mime });
   const url = URL.createObjectURL(blob);
-  const audio = new Audio(url);
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.setAttribute("playsinline", "true");
+  audio.setAttribute("webkit-playsinline", "true");
+  audio.src = url;
   audio.onended = () => {
+    URL.revokeObjectURL(url);
+    onEnded?.();
+  };
+  audio.onerror = () => {
     URL.revokeObjectURL(url);
     onEnded?.();
   };
@@ -31,25 +45,181 @@ export async function playBase64Audio(
   return audio;
 }
 
-function pickNaturalVoice(): SpeechSynthesisVoice | null {
+/** Call once from a user gesture so later edge-tts playback is allowed on mobile. */
+export async function unlockAudioPlayback(): Promise<void> {
+  try {
+    const ctx = new AudioContext();
+    if (ctx.state === "suspended") await ctx.resume();
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+    await ctx.close();
+  } catch {
+    // Best-effort unlock; playback may still require a tap overlay.
+  }
+}
+
+type VoiceLang = "en" | "hi" | "bn" | "ta" | "te" | "mr" | "gu" | "kn" | "ml";
+
+const SCRIPT_LANG: [RegExp, VoiceLang][] = [
+  [/[\u0900-\u097F]/, "hi"],
+  [/[\u0980-\u09FF]/, "bn"],
+  [/[\u0B80-\u0BFF]/, "ta"],
+  [/[\u0C00-\u0C7F]/, "te"],
+  [/[\u0A80-\u0AFF]/, "gu"],
+  [/[\u0C80-\u0CFF]/, "kn"],
+  [/[\u0D00-\u0D7F]/, "ml"],
+];
+
+/** Mature browser-TTS fallbacks — unique per avatar, never cute/high. */
+const PERSONA_VOICE: Record<
+  AvatarId,
+  { patterns: Partial<Record<VoiceLang, RegExp[]>>; rate: number; pitch: number }
+> = {
+  hop: {
+    patterns: {
+      en: [/Andrew/i, /Guy/i, /en-US.*Male/i, /David/i, /Mark/i],
+      hi: [/Madhur/i, /hi-IN.*Male/i, /hi-IN/i],
+      bn: [/Bashkar/i, /bn-IN/i],
+      ta: [/Valluvar/i, /ta-IN/i],
+      te: [/Mohan/i, /te-IN/i],
+      mr: [/Manohar/i, /mr-IN/i],
+      gu: [/Niranjan/i, /gu-IN/i],
+      kn: [/Gagan/i, /kn-IN/i],
+      ml: [/Midhun/i, /ml-IN/i],
+    },
+    rate: 0.88,
+    pitch: 0.92,
+  },
+  aura: {
+    patterns: {
+      // Female only — never bare /en-IN/ or /hi-IN/ (those match Prabhat/Madhur).
+      en: [/Neerja/i, /Aria/i, /Jenny/i, /Zira/i, /Female/i, /en-IN.*Female/i],
+      hi: [/Swara/i, /hi-IN.*Female/i, /Female/i],
+      bn: [/Tanishaa/i, /Female/i],
+      ta: [/Pallavi/i, /Female/i],
+      te: [/Shruti/i, /Female/i],
+      mr: [/Aarohi/i, /Female/i],
+      gu: [/Dhwani/i, /Female/i],
+      kn: [/Sapna/i, /Female/i],
+      ml: [/Sobhana/i, /Female/i],
+    },
+    rate: 0.9,
+    pitch: 1.02,
+  },
+  spark: {
+    patterns: {
+      // Prefer Ryan (GB) — must not fall through to Prabhat/Andrew (Milo).
+      en: [/Ryan/i, /en-GB/i, /Thomas/i, /Christopher/i, /Brian/i, /Steffan/i],
+      hi: [/Madhur/i, /hi-IN/i],
+      bn: [/Bashkar/i, /bn-IN/i],
+      ta: [/Valluvar/i, /ta-IN/i],
+      te: [/Mohan/i, /te-IN/i],
+      mr: [/Manohar/i, /mr-IN/i],
+      gu: [/Niranjan/i, /gu-IN/i],
+      kn: [/Gagan/i, /kn-IN/i],
+      ml: [/Midhun/i, /ml-IN/i],
+    },
+    rate: 0.96,
+    pitch: 1.0,
+  },
+};
+
+function detectLang(text: string, locale?: string | null): VoiceLang {
+  for (const [pattern, lang] of SCRIPT_LANG) {
+    if (pattern.test(text)) {
+      if (lang === "hi" && (locale || "").toLowerCase().startsWith("mr")) return "mr";
+      return lang;
+    }
+  }
+  const loc = (locale || "en-IN").toLowerCase();
+  const prefix = loc.split("-")[0] as VoiceLang;
+  if (prefix && prefix !== "en" && SCRIPT_LANG.some(([, l]) => l === prefix)) {
+    // Latin text with Indic locale → speak with English voice patterns
+    return "en";
+  }
+  return "en";
+}
+
+function utteranceLang(
+  lang: VoiceLang,
+  locale?: string | null,
+  avatarId?: AvatarId | null,
+): string {
+  if (lang === "en") {
+    // Ziggy uses a British male voice — lock browser TTS to en-GB.
+    if (avatarId === "spark") return "en-GB";
+    const loc = (locale || "en-IN").toLowerCase();
+    return loc.startsWith("en-gb") ? "en-GB" : "en-IN";
+  }
+  return `${lang}-IN`;
+}
+
+const MALE_VOICE_RE =
+  /male|andrew|ryan|prabhat|guy|david|mark|ravi|madhur|george|thomas|brian|christopher|steffan|ashwin|bashkar|valluvar|mohan|manohar|niranjan|gagan|midhun/i;
+const FEMALE_VOICE_RE =
+  /female|aria|neerja|jenny|zira|swara|sonia|susan|hazel|natasha|raveena|tanishaa|pallavi|shruti|aarohi|dhwani|sapna|sobhana|heera/i;
+
+function voiceLabel(v: SpeechSynthesisVoice): string {
+  return `${v.name} ${v.lang}`;
+}
+
+function pickPersonaVoice(
+  avatarId?: AvatarId | null,
+  lang: VoiceLang = "en",
+): SpeechSynthesisVoice | null {
   if (typeof window === "undefined" || !window.speechSynthesis) return null;
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
-  const prefer = [
-    /en-IN/i,
-    /en-GB/i,
-    /en-US/i,
-    /Google.*English/i,
-    /Microsoft.*(Aria|Jenny|Natasha|Neerja|Heera)/i,
-  ];
-  for (const pattern of prefer) {
-    const match = voices.find((v) => pattern.test(`${v.name} ${v.lang}`));
+
+  const wantFemale = avatarId === "aura";
+  const wantMale = avatarId === "hop" || avatarId === "spark";
+  const genderOk = (v: SpeechSynthesisVoice) => {
+    const label = voiceLabel(v);
+    if (wantFemale && MALE_VOICE_RE.test(label)) return false;
+    if (wantMale && FEMALE_VOICE_RE.test(label)) return false;
+    return true;
+  };
+
+  const persona = avatarId ? PERSONA_VOICE[avatarId] : null;
+  const patterns = persona?.patterns[lang] ?? [];
+  for (const pattern of patterns) {
+    const match = voices.find((v) => pattern.test(voiceLabel(v)) && genderOk(v));
     if (match) return match;
   }
+
+  if (lang !== "en") {
+    const byLang = voices.find(
+      (v) => v.lang.toLowerCase().startsWith(lang) && genderOk(v),
+    );
+    if (byLang) return byLang;
+  }
+
+  if (wantFemale) {
+    return (
+      voices.find((v) => FEMALE_VOICE_RE.test(voiceLabel(v))) ??
+      voices.find((v) => /en-IN|en-US/i.test(v.lang) && !MALE_VOICE_RE.test(voiceLabel(v))) ??
+      null
+    );
+  }
+
+  if (wantMale) {
+    const prefer =
+      avatarId === "spark"
+        ? [/Ryan/i, /en-GB/i, /Andrew/i, /Male/i]
+        : [/Andrew/i, /en-US.*Male/i, /Guy/i, /Male/i];
+    for (const pattern of prefer) {
+      const match = voices.find((v) => pattern.test(voiceLabel(v)) && genderOk(v));
+      if (match) return match;
+    }
+    return voices.find((v) => MALE_VOICE_RE.test(voiceLabel(v))) ?? null;
+  }
+
   return voices.find((v) => v.lang.toLowerCase().startsWith("en")) ?? voices[0] ?? null;
 }
 
-/** Soften stiff punctuation before speaking. */
 function humanizeForSpeech(text: string): string {
   return text
     .replace(/\s*\([^)]*(listening|cbt|mi|technique|validation)[^)]*\)/gi, "")
@@ -60,17 +230,21 @@ function humanizeForSpeech(text: string): string {
 export function speakWithBrowserTts(
   text: string,
   onEnd?: () => void,
+  opts?: { avatarId?: AvatarId | null; locale?: string | null },
 ): SpeechSynthesisUtterance | null {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     onEnd?.();
     return null;
   }
   window.speechSynthesis.cancel();
+  const lang = detectLang(text, opts?.locale);
+  const persona = opts?.avatarId ? PERSONA_VOICE[opts.avatarId] : null;
   const utterance = new SpeechSynthesisUtterance(humanizeForSpeech(text));
-  utterance.rate = 0.92;
-  utterance.pitch = 1.02;
+  utterance.rate = persona?.rate ?? 0.9;
+  utterance.pitch = persona?.pitch ?? 0.98;
   utterance.volume = 1;
-  const voice = pickNaturalVoice();
+  utterance.lang = utteranceLang(lang, opts?.locale, opts?.avatarId);
+  const voice = pickPersonaVoice(opts?.avatarId, lang);
   if (voice) utterance.voice = voice;
   utterance.onend = () => onEnd?.();
   utterance.onerror = () => onEnd?.();
@@ -81,10 +255,9 @@ export function speakWithBrowserTts(
     started = true;
     window.speechSynthesis.speak(utterance);
   };
-  // Voices often load asynchronously on Windows/Chrome.
   if (!window.speechSynthesis.getVoices().length) {
     window.speechSynthesis.onvoiceschanged = () => {
-      const late = pickNaturalVoice();
+      const late = pickPersonaVoice(opts?.avatarId, lang);
       if (late) utterance.voice = late;
       window.speechSynthesis.onvoiceschanged = null;
       speakNow();
@@ -96,8 +269,9 @@ export function speakWithBrowserTts(
   return utterance;
 }
 
-/** Browser STT fallback when server Whisper is not installed. */
-export function transcribeWithBrowserSpeech(): Promise<string> {
+export function transcribeWithBrowserSpeech(
+  locale?: string | null,
+): Promise<string> {
   const SpeechRecognitionCtor =
     typeof window !== "undefined"
       ? window.SpeechRecognition ?? window.webkitSpeechRecognition
@@ -109,9 +283,11 @@ export function transcribeWithBrowserSpeech(): Promise<string> {
     );
   }
 
+  const lang = (locale || "en-IN").toLowerCase().startsWith("hi") ? "hi-IN" : "en-IN";
+
   return new Promise((resolve, reject) => {
     const recognition = new SpeechRecognitionCtor();
-    recognition.lang = "en-IN";
+    recognition.lang = lang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onresult = (event: SpeechRecognitionEvent) => {
