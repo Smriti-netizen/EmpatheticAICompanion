@@ -7,32 +7,47 @@ export interface AvatarPreset {
   vibe: string;
   blurb: string;
   accent: string;
+  /** Soft pastel backdrop behind the portrait. */
+  glow: string;
+  /** Rendered character portrait under public/avatars/. */
+  imageSrc: string;
 }
 
+/**
+ * Three AI companion characters (Milo / Coco / Ziggy).
+ * IDs stay hop|aura|spark for storage/API compatibility.
+ * They are clearly friendly AI avatars — never presented as real people.
+ */
 export const AVATAR_PRESETS: AvatarPreset[] = [
   {
     id: "hop",
-    name: "Hop",
-    vibe: "Gentle rabbit guide",
-    blurb: "Soft, patient, and steady — good if you want a calm companion energy.",
-    accent: "#6b8f71",
+    name: "Milo",
+    vibe: "Soft & soothing",
+    blurb: "A cozy, unhurried presence — good when you just want gentle, calm company.",
+    accent: "#e0a05a",
+    glow: "#f7e6cf",
+    imageSrc: "/avatars/milo/avatar.png",
   },
   {
     id: "aura",
-    name: "Aura",
-    vibe: "Warm human counselor",
-    blurb: "Clear and caring — closer to a classic therapy-room presence.",
-    accent: "#7a6b8f",
+    name: "Coco",
+    vibe: "Warm & attentive",
+    blurb: "Grounded and caring — a steady listener who stays right there with you.",
+    accent: "#6f9bd1",
+    glow: "#dbe8f7",
+    imageSrc: "/avatars/coco/avatar.png",
   },
   {
     id: "spark",
-    name: "Spark",
-    vibe: "Bright little companion",
-    blurb: "Light and encouraging — helpful when you need a softer, playful tone.",
-    accent: "#8f7a3b",
+    name: "Ziggy",
+    vibe: "Kind & easygoing",
+    blurb: "Light and reassuring — soft encouragement, never any pressure.",
+    accent: "#7ea36a",
+    glow: "#e2efd6",
+    imageSrc: "/avatars/ziggy/avatar.png",
   },
 ];
 
 export function getAvatar(id: string | null | undefined): AvatarPreset {
-  return AVATAR_PRESETS.find((a) => a.id === id) ?? AVATAR_PRESETS[0];
+  return AVATAR_PRESETS.find((a) => a.id === id) ?? AVATAR_PRESETS[0]!;
 }

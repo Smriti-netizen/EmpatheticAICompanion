@@ -31,6 +31,34 @@ import {
   type IntakeAnswers,
   type QuickOption,
 } from "./intakeScript";
+import {
+  isFreeWordStep,
+  isUnrecognizedOption,
+  looksLikeGibberish,
+} from "./onboardingValidation";
+
+/** Gentle nudges when we can't parse the answer. */
+function clarifyMessage(
+  turn: BotTurn,
+  kind: "option" | "gibberish",
+  attempt: number,
+): string {
+  if (kind === "option") {
+    return attempt === 0
+      ? "I didn't quite catch that — could you tap one of the options below, or say it in a word?"
+      : "No worries — just pick the closest option below so I record it correctly.";
+  }
+  if (attempt === 0) {
+    return "I want to make sure I understand you — that came through a little jumbled on my end. Could you say it again in a few plain words?";
+  }
+  const example =
+    turn.id === "concerns"
+      ? ' For example, "work stress" or "trouble sleeping".'
+      : turn.id === "goal"
+        ? ' For example, "feel calmer" or "sleep better".'
+        : "";
+  return `Even a word or two helps.${example} What feels closest to what you mean?`;
+}
 
 type Phase = "consent" | "intake";
 
@@ -86,6 +114,7 @@ function clearFull() {
 export function useOnboardingChat() {
   const navigate = useNavigate();
   const booted = useRef(false);
+  const clarifyRef = useRef<Record<string, number>>({});
 
   const [phase, setPhase] = useState<Phase>("consent");
   const [consent, setConsent] = useState<ConsentDraft>(emptyConsent);
@@ -234,13 +263,6 @@ export function useOnboardingChat() {
           ? "agree"
           : display);
 
-      if (consentTurn.id === "consent" && /crisis/i.test(value + display)) {
-        clearFull();
-        navigate("/crisis");
-        setBusy(false);
-        return;
-      }
-
       const result = nextConsentTurn(consentTurn, value, consent);
       setConsent(result.draft);
 
@@ -323,33 +345,44 @@ export function useOnboardingChat() {
       return;
     }
 
-    const normalized = normalizeUserValue(
-      intakeTurn,
-      option?.value ?? raw,
-      intakeTurn.options,
-    );
+    const typedRaw = option?.value ?? raw;
+    const normalized = normalizeUserValue(intakeTurn, typedRaw, intakeTurn.options);
+
+    // Validate only what the user typed — chip taps are always valid.
+    if (!option) {
+      const stepId = intakeTurn.id;
+      const attempt = clarifyRef.current[stepId] ?? 0;
+      const unrecognized = isUnrecognizedOption(intakeTurn, normalized);
+      const gibberish = isFreeWordStep(intakeTurn) && looksLikeGibberish(typedRaw);
+      // After a couple of nudges on a free-word step, accept what they wrote.
+      const giveUp = gibberish && attempt >= 2;
+
+      if ((unrecognized || gibberish) && !giveUp) {
+        clarifyRef.current[stepId] = attempt + 1;
+        const out = await pushAssistant(
+          clarifyMessage(intakeTurn, unrecognized ? "option" : "gibberish", attempt),
+          nextMessages,
+          "question",
+        );
+        setShowChips(true);
+        saveFull({
+          version: 2,
+          phase: "intake",
+          consent,
+          consentTurn,
+          answers,
+          intakeTurn,
+          messages: out,
+          turnIndex,
+        });
+        setBusy(false);
+        return;
+      }
+      clarifyRef.current[stepId] = 0;
+    }
+
     const result = nextTurn(intakeTurn, normalized, answers);
     setAnswers(result.answers);
-
-    if (result.crisisExit) {
-      try {
-        const userId = localStorage.getItem("empathic.user_id");
-        if (userId) {
-          await api.saveIntake(userId, {
-            primary_concerns: result.answers.concerns,
-            session_goal: result.answers.goal || "safety first",
-            crisis_screen_positive: true,
-            duration_problem: result.answers.duration || undefined,
-          });
-        }
-      } catch {
-        // continue to crisis
-      }
-      clearFull();
-      navigate("/crisis");
-      setBusy(false);
-      return;
-    }
 
     if (!result.turn) {
       await finishIntake(result.answers);

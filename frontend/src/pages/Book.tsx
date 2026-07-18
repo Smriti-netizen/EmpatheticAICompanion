@@ -62,42 +62,67 @@ export function BookPage() {
     }
   }
 
+  const [showSchedule, setShowSchedule] = useState(false);
+
   return (
     <div className="mx-auto min-h-screen max-w-2xl px-4 py-10">
-      <h1 className="font-display text-4xl font-semibold">Book a session</h1>
+      <h1 className="font-display text-4xl font-semibold">Your session</h1>
       <p className="mt-2 text-sm text-muted">
-        45-minute slots, 09:00–21:00 IST, with a 10-minute buffer — or start one now.
+        Talk now, or set aside time that works for you.
       </p>
 
-      <button
-        type="button"
-        disabled={booking}
-        onClick={() => void startNow()}
-        className="mt-6 w-full rounded-2xl bg-accent px-5 py-4 text-sm font-semibold text-white disabled:opacity-50"
-      >
-        Start a session now
-      </button>
-
-      <p className="mt-8 text-sm font-medium text-ink">Or pick a later slot</p>
       {error && <p className="mt-4 text-sm text-crisis">{error}</p>}
-      <div className="mt-4">
-        {!error && (
-          <BookingCalendar
-            slots={slots}
-            loading={loading || booking}
-            onBook={(start) => void onBook(start)}
-          />
-        )}
-        {error && !loading && (
-          <button
-            type="button"
-            className="mt-2 text-sm font-semibold text-accent underline"
-            onClick={() => window.location.reload()}
-          >
-            Retry loading slots
-          </button>
-        )}
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <button
+          type="button"
+          disabled={booking}
+          onClick={() => void startNow()}
+          className="flex flex-col items-start rounded-3xl bg-accent px-5 py-5 text-left text-white shadow-warm transition hover:brightness-105 active:scale-[0.99] disabled:opacity-50"
+        >
+          <span className="text-base font-semibold">Start a session now</span>
+          <span className="mt-1 text-sm text-white/85">
+            Begin right away · about 30 minutes
+          </span>
+        </button>
+
+        <button
+          type="button"
+          disabled={booking}
+          onClick={() => setShowSchedule((v) => !v)}
+          aria-expanded={showSchedule}
+          className="flex flex-col items-start rounded-2xl border border-accent/25 bg-accent-soft/60 px-5 py-5 text-left text-ink transition hover:border-accent hover:bg-accent-soft disabled:opacity-50"
+        >
+          <span className="text-base font-semibold">Schedule for later</span>
+          <span className="mt-1 text-sm text-muted">
+            Pick a time · 09:00–21:00 IST
+          </span>
+        </button>
       </div>
+
+      {showSchedule && (
+        <div className="mt-8">
+          <p className="text-sm font-medium text-ink">Choose a time that suits you</p>
+          <div className="mt-4">
+            {!error && (
+              <BookingCalendar
+                slots={slots}
+                loading={loading || booking}
+                onBook={(start) => void onBook(start)}
+              />
+            )}
+            {error && !loading && (
+              <button
+                type="button"
+                className="mt-2 text-sm font-semibold text-accent underline"
+                onClick={() => window.location.reload()}
+              >
+                Retry loading slots
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

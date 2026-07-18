@@ -30,17 +30,40 @@ export function OnboardingChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing, chips]);
 
+  // Approximate "how far along" for the growing-vine progress (a feeling,
+  // not a strict step counter — no job-application progress bar).
+  const answered = messages.filter((m) => m.role === "assistant").length;
+  const progress = Math.min(0.97, answered / 26);
+
   return (
     <div className="flex h-[100dvh] flex-col bg-paper">
-      <header className="flex items-center gap-3 border-b border-line/60 px-4 py-3 sm:px-6">
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-accent text-xs font-bold text-white">
+      <header className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-6">
+        <div className="grid h-9 w-9 place-items-center rounded-full bg-accent text-xs font-bold text-white shadow-warm-sm">
           EC
         </div>
         <div>
           <p className="text-sm font-semibold text-ink">Empathic Companion</p>
-          <p className="text-xs text-muted">Online · onboarding chat</p>
+          <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+            Settling in
+          </p>
         </div>
       </header>
+
+      {/* Botanical vine that grows left → right instead of a percentage bar. */}
+      <div className="px-4 pb-3 sm:px-6" aria-hidden="true">
+        <div className="relative h-[3px] w-full rounded-full bg-line/60">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-sage/80 transition-[width] duration-700 ease-out"
+            style={{ width: `${progress * 100}%` }}
+          />
+          <span
+            className="absolute -top-[7px] text-[13px] leading-none text-sage transition-[left] duration-700 ease-out"
+            style={{ left: `calc(${progress * 100}% - 6px)` }}
+          >
+            ❧
+          </span>
+        </div>
+      </div>
 
       <div
         ref={scrollerRef}
@@ -76,7 +99,7 @@ export function OnboardingChatPage() {
           <ChatComposer
             value={draft}
             disabled={busy || typing}
-            placeholder="Type a message…"
+            placeholder="Say whatever's on your mind…"
             onChange={setDraft}
             onSend={sendText}
           />

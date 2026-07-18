@@ -92,7 +92,6 @@ export function normalizeUserValue(
   }
 
   if (turn.id === "summary") {
-    if (/crisis|help|hotline/i.test(trimmed)) return "crisis";
     if (/confirm|looks right|continue|yes|ok/i.test(trimmed)) return "confirm";
   }
 

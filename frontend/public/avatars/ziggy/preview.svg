@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <circle cx="100" cy="108" r="54" fill="#f5d76e"/>
+  <path d="M62 72 L50 26 L84 58 Z" fill="#f0c94d"/>
+  <path d="M138 72 L150 26 L116 58 Z" fill="#f0c94d"/>
+  <circle cx="78" cy="104" r="7" fill="#3b2f14"/>
+  <circle cx="122" cy="104" r="7" fill="#3b2f14"/>
+  <ellipse cx="100" cy="126" rx="12" ry="7" fill="#3b2f14"/>
+  <text x="100" y="188" text-anchor="middle" font-family="system-ui" font-size="14" fill="#8f7a3b">Ziggy</text>
+</svg>

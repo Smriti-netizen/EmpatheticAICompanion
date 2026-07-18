@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <circle cx="100" cy="108" r="58" fill="#e4ebe4"/>
+  <path d="M58 70 L48 28 L78 58 Z" fill="#d5e0d5"/>
+  <path d="M142 70 L152 28 L122 58 Z" fill="#d5e0d5"/>
+  <circle cx="78" cy="105" r="6" fill="#2a3b34"/>
+  <circle cx="122" cy="105" r="6" fill="#2a3b34"/>
+  <ellipse cx="100" cy="128" rx="12" ry="6" fill="#c47b6a"/>
+  <text x="100" y="188" text-anchor="middle" font-family="system-ui" font-size="14" fill="#6b8f71">Milo</text>
+</svg>

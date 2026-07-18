@@ -82,7 +82,7 @@ export function emptyAnswers(): IntakeAnswers {
 export function firstTurn(name: string): BotTurn {
   return {
     id: "welcome",
-    text: `Hi${name ? ` ${name}` : ""}. I’ll ask a few short questions in chat so I understand what you need — then you can pick a counselor avatar and book a 45‑minute session. Ready?`,
+    text: `Hi${name ? ` ${name}` : ""}. I’ll ask a few short questions in chat so I understand what you need — then you can pick a counselor and start a session now (about 30 minutes) or schedule one for later. Ready?`,
     options: [{ label: "Yes, let’s begin", value: "ready" }],
   };
 }
@@ -164,16 +164,16 @@ export function nextTurn(
       };
 
     case "crisis": {
+      // Recorded for the counselor's context — we no longer dead-end the flow.
       next.crisis = value.toLowerCase().startsWith("y");
-      if (next.crisis) {
-        return { answers: next, crisisExit: true, turn: null };
-      }
       return {
         answers: next,
         crisisExit: false,
         turn: {
           id: "prior_therapy",
-          text: "Have you worked with a therapist or counselor before?",
+          text: next.crisis
+            ? "Thank you for trusting me with that — we'll take good care of it together in session. Have you worked with a therapist or counselor before?"
+            : "Have you worked with a therapist or counselor before?",
           options: [
             { label: "Yes", value: "yes" },
             { label: "No", value: "no" },
@@ -269,19 +269,12 @@ export function nextTurn(
         turn: {
           id: "summary",
           text: buildSummary(next, phq, gad),
-          options: [
-            { label: "Looks right — continue", value: "confirm" },
-            { label: "I need crisis help", value: "crisis" },
-          ],
+          options: [{ label: "Looks right — continue", value: "confirm" }],
         },
       };
     }
 
     case "summary":
-      if (value === "crisis") {
-        next.crisis = true;
-        return { answers: next, crisisExit: true, turn: null };
-      }
       return {
         answers: next,
         crisisExit: false,
