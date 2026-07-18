@@ -5,46 +5,42 @@
 | Choice | Decision |
 |--------|----------|
 | Intake | Chat questionnaire (PHQ-9 / GAD-7 in conversation) |
-| Avatars | Original presets **Hop / Aura / Spark** (no third-party IP) |
+| Avatars | Original cats **Milo / Coco / Ziggy** (ids hop/aura/spark) |
 | Session | Video-call room + End call |
-| Voice | **Silero VAD → Whisper STT → Piper/edge-tts** (browser fallback if Whisper offline) |
-| Camera | Optional PiP + on-device motion cues (no upload) |
-| Type fallback | Hidden “Type instead” only |
+| Voice | Silero VAD → Whisper → Piper/edge-tts (browser fallback only if Whisper offline) |
+| Camera | Optional PiP + on-device cues |
+| Type fallback | Hidden “Type instead” |
 
 ## Gates
 
 | Phase | Status |
 |-------|--------|
-| P0–P3 core APIs | **PASS** (`scripts/e2e_api_flow.py`) |
-| Chat intake / onboarding | **PASS** |
-| Avatar picker | **PASS** |
-| **P4 Voice** | **INTEGRATED** — CallRoom → VAD + `/sessions/{id}/voice`; TTS via Piper or edge-tts; run `scripts/setup_voice.ps1` |
-| **P5 Avatar life** | **PASS** — blink, breath, speaking mouth; Rive optional later |
-| **P6 Memory / openings** | **PASS** — personalized `Hi {name}` openings + chart memory |
-| **P7 Oracle deploy** | **SCRIPTS READY** — `deploy/oracle-setup.sh` + systemd/nginx |
+| P0–P3 core APIs | **PASS** |
+| P4 Voice | **INTEGRATED** — restart uvicorn after `scripts/setup_voice.ps1` |
+| P5 Avatar life | **PASS** — FluidCat Milo/Coco/Ziggy + amplitude mouth; Live2D drop-in folder ready |
+| P6 Openings | **PASS** — `Hi {name}` |
+| P7 Oracle | **SCRIPTS READY** |
 
-## Voice architecture
+## Voice (Phase 0 checklist)
 
-1. Client: `@ricky0123/vad-web` (Silero) detects end of speech  
-2. Client encodes 16 kHz WAV → `POST /api/v1/sessions/{id}/voice`  
-3. Server: faster-whisper → counselor LLM → Piper **or** edge-tts → `audio_base64`  
-4. Client: `playBase64Audio` (browser TTS only if no audio)  
+1. `.\scripts\setup_voice.ps1`
+2. **Restart** uvicorn (old process keeps `whisper: skipped`)
+3. Open http://127.0.0.1:8000/api/v1/health → expect `whisper: ready`, `tts: ready`, `tts_engine: edge-tts|piper`
+4. Session header must show `Whisper + …` not `browser fallback`
 
-Fallback when `health.whisper != ready`: previous browser SpeechRecognition loop.
+Startup now warms Whisper/TTS and health exposes `whisper_error` if load fails.
 
-## Setup voice locally
+## Avatars
 
-```powershell
-cd C:\Users\smrit\OneDrive\empathaticaicompanion
-.\scripts\setup_voice.ps1
-# restart uvicorn, then:
-# Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
-```
+- Catalog: Milo / Coco / Ziggy with `modelPath` + `gestureMap`
+- Runtime: `FluidCatAvatar` (blink, breath, ear wiggle, expression poses, voice mouth)
+- Live2D: place Cubism exports under `frontend/public/avatars/{milo,coco,ziggy}/` (see README there)
+- Picker uses static `preview.svg` (no three Pixi instances)
 
-## Test commands
+## Test
 
 ```powershell
 backend\.venv\Scripts\python.exe scripts\e2e_api_flow.py
-cd frontend; npx tsx scripts/check_intake.ts
 cd frontend; npm run build
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
 ```

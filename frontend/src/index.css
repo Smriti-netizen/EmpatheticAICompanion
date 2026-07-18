@@ -4,16 +4,21 @@
 @theme {
   --font-display: "Fraunces", Georgia, serif;
   --font-sans: "DM Sans", system-ui, sans-serif;
-  --color-ink: #1c2b2a;
-  --color-muted: #5c6f6d;
-  --color-paper: #f3f1ea;
-  --color-surface: #fffcf7;
-  --color-line: #d8d2c4;
-  --color-accent: #2f6f68;
-  --color-accent-soft: #dceae7;
-  --color-user: #e7efe8;
-  --color-crisis: #7a2e2e;
-  --color-crisis-bg: #f8e8e6;
+  /* Soft Bloom palette — warm, never pure black. */
+  --color-ink: #2e2a24; /* warm charcoal (darkest text) */
+  --color-muted: #8a8071; /* soft taupe */
+  --color-paper: #f7f2e9; /* warm cream canvas */
+  --color-surface: #fbf8f2; /* soft ivory cards/bubbles */
+  --color-line: #e6ddc9; /* hairline */
+  --color-accent: #e4643a; /* terracotta */
+  --color-accent-soft: #f6e1d6; /* soft terracotta tint */
+  --color-sage: #5c7a5e; /* calm / safe */
+  --color-sky: #7fa8b8; /* session / info */
+  --color-glow: #fff3d6; /* AI presence glow */
+  --color-charcoal: #3a362e; /* darkest surface allowed (call letterbox) */
+  --color-user: #f3dccf; /* user bubble */
+  --color-crisis: #9a4a3a;
+  --color-crisis-bg: #f6e2da;
 }
 
 * {
@@ -31,9 +36,29 @@ body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #dceae7 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, #efe8d8 0%, transparent 45%),
+    radial-gradient(ellipse 80% 50% at 8% -10%, #f6e1d6 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 100% 0%, #e6efe0 0%, transparent 48%),
     var(--color-paper);
+}
+
+/* Paper grain — subtle, on every surface, so nothing feels flat/SaaS. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.035;
+  background-image: radial-gradient(#2e2a24 1px, transparent 1.3px);
+  background-size: 3px 3px;
+}
+
+/* Warm, sunlight-like shadows (never grey UI elevation). */
+.shadow-warm {
+  box-shadow: 0 22px 60px -28px rgba(228, 100, 58, 0.3);
+}
+.shadow-warm-sm {
+  box-shadow: 0 8px 24px -14px rgba(228, 100, 58, 0.28);
 }
 
 @keyframes fadeSlide {
@@ -66,4 +91,151 @@ body {
   50% {
     transform: scale(1.018);
   }
+}
+
+@keyframes earWiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes bloomPulse {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes bloomGlow {
+  0%,
+  100% {
+    text-shadow: 0 0 6px rgba(255, 243, 214, 0.55);
+  }
+  50% {
+    text-shadow: 0 0 18px rgba(255, 243, 214, 0.95);
+  }
+}
+
+@keyframes vineGrow {
+  from {
+    width: 0%;
+  }
+}
+
+/* Soft cross-fade + slight scale-up as each page enters (§5). */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ASCII-bloom wipe overlay masking the swap between flows (§5). */
+@keyframes bloomWipe {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.page-in {
+  animation: pageIn 360ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-in {
+    animation: pageIn 200ms ease-out both;
+    transform: none;
+  }
+  body::after {
+    display: none;
+  }
+}
+
+@keyframes kenBurns {
+  from {
+    transform: scale(1) translateY(0);
+  }
+  to {
+    transform: scale(1.07) translateY(-1.5%);
+  }
+}
+
+@keyframes asciiShimmer {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes ornamentIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+/* Soft dot-matrix "paper" texture — evokes the ASCII/vintage print look. */
+.dot-grain {
+  position: relative;
+}
+.dot-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(74, 60, 40, 0.06) 1px, transparent 1.4px);
+  background-size: 5px 5px;
+  mix-blend-mode: multiply;
+  z-index: 0;
+}
+
+.ascii-shimmer {
+  animation: asciiShimmer 3.6s ease-in-out infinite;
+}
+
+/* Vintage double-rule frame used around portrait "plates". */
+.plate-frame {
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 3px rgba(74, 60, 40, 0.35),
+    0 18px 40px -20px rgba(74, 60, 40, 0.5);
 }

@@ -1,15 +1,26 @@
-import { useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
+import { AsciiBloom } from "./components/AsciiBloom";
 import { AvatarPickerPage } from "./features/avatar/AvatarPickerPage";
 import { OnboardingChatPage } from "./features/onboarding/OnboardingChatPage";
-import { CallRoomPage } from "./features/session/CallRoomPage";
 import { BookPage } from "./pages/Book";
 import { CrisisPage } from "./pages/Crisis";
 import { DashboardPage } from "./pages/Dashboard";
 import { LandingPage } from "./pages/Landing";
 
-/** Keep in-app routes in this tab (ignore target=_blank / modified clicks). */
+/** Session room loads separately so onnx/vad never blanks the whole app. */
+const CallRoomPage = lazy(() =>
+  import("./features/session/CallRoomPage").then((m) => ({ default: m.CallRoomPage })),
+);
+
 function SameTabGuards({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
@@ -32,7 +43,6 @@ function SameTabGuards({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Absolute URL to another origin — leave alone.
       try {
         const url = new URL(href, window.location.origin);
         if (url.origin !== window.location.origin) return;
@@ -52,24 +62,88 @@ function SameTabGuards({ children }: { children: React.ReactNode }) {
   return children;
 }
 
+function SessionFallback() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-paper">
+      <AsciiBloom label="Getting your space ready…" size="lg" />
+    </div>
+  );
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+/**
+ * ASCII-bloom wipe: briefly blooms across the screen on each route change,
+ * masking the swap so flows feel connected instead of hard-cutting (§5).
+ * Skipped on the heavy /session route and when reduced-motion is set.
+ */
+function BloomWipe() {
+  const location = useLocation();
+  const [active, setActive] = useState(false);
+  const first = useRef(true);
+
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (prefersReducedMotion() || location.pathname.startsWith("/session/")) return;
+    setActive(true);
+    const t = window.setTimeout(() => setActive(false), 620);
+    return () => window.clearTimeout(t);
+  }, [location.pathname]);
+
+  if (!active) return null;
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-[70] grid place-items-center bg-paper [animation:bloomWipe_620ms_ease-in-out_both]"
+      aria-hidden="true"
+    >
+      <AsciiBloom size="lg" />
+    </div>
+  );
+}
+
+/** Cross-fades + gently scales the routed page in on each navigation. */
+function RoutedPages() {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="page-in">
+      <Routes location={location}>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/onboarding" element={<OnboardingChatPage />} />
+        <Route path="/consent" element={<Navigate to="/onboarding" replace />} />
+        <Route path="/intake" element={<Navigate to="/onboarding" replace />} />
+        <Route path="/screening" element={<Navigate to="/onboarding" replace />} />
+        <Route path="/avatar" element={<AvatarPickerPage />} />
+        <Route path="/book" element={<BookPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route
+          path="/session/:id"
+          element={
+            <Suspense fallback={<SessionFallback />}>
+              <CallRoomPage />
+            </Suspense>
+          }
+        />
+        <Route path="/crisis" element={<CrisisPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <SameTabGuards>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          {/* Single conversational onboarding — no form pages */}
-          <Route path="/onboarding" element={<OnboardingChatPage />} />
-          <Route path="/consent" element={<Navigate to="/onboarding" replace />} />
-          <Route path="/intake" element={<Navigate to="/onboarding" replace />} />
-          <Route path="/screening" element={<Navigate to="/onboarding" replace />} />
-          <Route path="/avatar" element={<AvatarPickerPage />} />
-          <Route path="/book" element={<BookPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/session/:id" element={<CallRoomPage />} />
-          <Route path="/crisis" element={<CrisisPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <BloomWipe />
+        <RoutedPages />
       </SameTabGuards>
     </BrowserRouter>
   );

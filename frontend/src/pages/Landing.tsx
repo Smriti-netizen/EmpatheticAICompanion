@@ -1,112 +1,76 @@
 import { useNavigate } from "react-router-dom";
 
-const TRUST = [
-  { icon: "🔒", label: "Private & Secure" },
-  { icon: "🤝", label: "Judgment-Free Conversations" },
-  { icon: "🧠", label: "Personalized AI Therapy Sessions" },
-  { icon: "📅", label: "Book 45-Minute Sessions" },
-] as const;
+import { AsciiBloom } from "../components/AsciiBloom";
+import { Reveal } from "../components/Reveal";
 
 export function LandingPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
-      <section className="flex flex-1 flex-col items-center justify-center px-5 py-16 sm:py-20">
-        <div className="flex w-full max-w-[44rem] flex-col items-center text-center">
-          {/* Brand / logo */}
-          <div
-            className="flex flex-col items-center gap-3 animate-[heroIn_700ms_ease-out]"
-            style={{ animationDelay: "0ms", animationFillMode: "both" }}
-          >
-            <div
-              className="grid h-14 w-14 place-items-center rounded-2xl bg-accent text-lg font-semibold tracking-tight text-white shadow-[0_16px_40px_-18px_rgba(47,111,104,0.85)]"
-              aria-hidden
-            >
-              EC
-            </div>
-            <p className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-              Empathic Companion
+    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-paper">
+      {/* Hero image — soft-focus meadow, warm film tones */}
+      <img
+        src="/hero_meadow.png"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover [animation:kenBurns_28s_ease-out_forwards]"
+      />
+      {/* Cream scrims for legibility, kept gentle */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#f7f2e9]/88 via-[#f7f2e9]/38 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#f7f2e9]/85 to-transparent" />
+
+      {/* Brand mark */}
+      <span className="absolute top-6 left-6 text-[11px] font-semibold tracking-[0.3em] text-ink/70 uppercase sm:top-8 sm:left-10">
+        Empathic Companion
+      </span>
+
+      {/* Quiet ASCII-bloom — the AI's presence, breathing in the corner */}
+      <div className="absolute top-6 right-6 hidden opacity-70 [animation:floatSoft_6s_ease-in-out_infinite] sm:top-10 sm:right-12 sm:block">
+        <AsciiBloom />
+      </div>
+
+      {/* Hero copy */}
+      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-center px-6 sm:px-16">
+        <div className="max-w-xl">
+          <Reveal>
+            <h1 className="font-display text-[2.9rem] leading-[1.02] font-semibold tracking-tight text-ink sm:text-[5rem]">
+              A quiet place
+              <br />
+              to think out loud.
+            </h1>
+          </Reveal>
+
+          <Reveal delay={140}>
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed text-ink/70 sm:text-lg">
+              A private space to talk — and be heard.
             </p>
-          </div>
+          </Reveal>
 
-          <h1
-            className="mt-8 font-display text-[2.15rem] font-semibold leading-[1.15] tracking-tight text-ink sm:text-5xl animate-[heroIn_700ms_ease-out]"
-            style={{ animationDelay: "80ms", animationFillMode: "both" }}
-          >
-            Your AI Therapist &amp; Counselor
-          </h1>
-
-          <p
-            className="mt-4 text-lg font-medium text-accent sm:text-xl animate-[heroIn_700ms_ease-out]"
-            style={{ animationDelay: "140ms", animationFillMode: "both" }}
-          >
-            Therapy made accessible to everyone.
-          </p>
-
-          <p
-            className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base animate-[heroIn_700ms_ease-out]"
-            style={{ animationDelay: "200ms", animationFillMode: "both" }}
-          >
-            Have thoughtful, private conversations with your AI therapist in a safe and
-            judgment-free space. Start with a short onboarding conversation, then book
-            focused 45-minute therapy sessions designed to help you reflect, navigate
-            challenges, and build healthier habits.
-          </p>
-
-          <div
-            className="mt-10 animate-[heroIn_700ms_ease-out]"
-            style={{ animationDelay: "280ms", animationFillMode: "both" }}
-          >
+          <Reveal delay={260}>
             <button
               type="button"
               onClick={() => navigate("/onboarding")}
-              className="inline-flex min-w-[10.5rem] items-center justify-center rounded-2xl bg-accent px-8 py-3.5 text-sm font-semibold text-white shadow-[0_18px_40px_-20px_rgba(47,111,104,0.9)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="group mt-10 inline-flex items-center gap-2 rounded-full bg-accent px-9 py-4 text-xs font-semibold tracking-[0.2em] text-white uppercase shadow-warm transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.98]"
             >
-              Let&apos;s Begin
+              Start talking
+              <span className="transition-transform group-hover:translate-x-1">→</span>
             </button>
-          </div>
+          </Reveal>
 
-          <ul
-            className="mt-12 flex w-full max-w-lg flex-wrap items-center justify-center gap-x-5 gap-y-3 animate-[heroIn_700ms_ease-out]"
-            style={{ animationDelay: "360ms", animationFillMode: "both" }}
-          >
-            {TRUST.map((item) => (
-              <li
-                key={item.label}
-                className="flex items-center gap-1.5 text-xs text-muted sm:text-[13px]"
-              >
-                <span aria-hidden>{item.icon}</span>
-                <span>{item.label}</span>
-              </li>
-            ))}
-          </ul>
+          <Reveal delay={380}>
+            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[10px] tracking-[0.2em] text-ink/50 uppercase">
+              <span>Private</span>
+              <span>Judgment-free</span>
+              <span>Here whenever you need</span>
+            </div>
+          </Reveal>
         </div>
-      </section>
+      </div>
 
-      <footer className="border-t border-line/50 px-5 py-8">
-        <div className="mx-auto max-w-[44rem] text-center">
-          <p className="text-[11px] font-medium tracking-wide text-muted/80 uppercase">
-            Emergency Information
-          </p>
-          <p className="mt-2 text-[12px] leading-relaxed text-muted/75">
-            If you or someone else is in immediate danger or experiencing a mental health
-            crisis, please contact local emergency services immediately.
-          </p>
-          <p className="mt-3 text-[12px] leading-relaxed text-muted/75">
-            <span className="font-medium text-muted/90">India</span>
-            {" · "}
-            Emergency: <span className="font-medium text-muted/90">112</span>
-            {" · "}
-            Tele-MANAS: <span className="font-medium text-muted/90">14416</span>
-            {" / "}
-            <span className="font-medium text-muted/90">1-800-89-14416</span>
-          </p>
-          <p className="mt-3 text-[11px] leading-relaxed text-muted/65">
-            This AI therapist is not a replacement for emergency medical or psychiatric care.
-          </p>
-        </div>
-      </footer>
+      {/* Minimal safety line */}
+      <p className="absolute inset-x-0 bottom-5 z-10 px-6 text-center text-[10px] tracking-[0.16em] text-ink/45 uppercase">
+        In crisis · call 112 or Tele-MANAS 14416
+      </p>
     </div>
   );
 }
