@@ -1,4 +1,5 @@
-import { defineConfig } from "vite";
+/// <reference types="vitest/config" />
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -12,4 +13,8 @@ export default defineConfig({
     exclude: ["onnxruntime-web", "@ricky0123/vad-web"],
   },
   assetsInclude: ["**/*.onnx", "**/*.wasm"],
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+  },
 });
