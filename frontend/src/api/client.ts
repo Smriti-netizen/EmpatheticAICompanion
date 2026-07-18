@@ -80,11 +80,17 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  setAvatar: (userId: string, avatarId: string) =>
-    request(`/api/v1/users/${userId}/avatar`, {
-      method: "PUT",
-      body: JSON.stringify({ avatar_id: avatarId }),
-    }),
+  setAvatar: (userId: string, avatarId: string, locale?: string) =>
+    request<{ user_id: string; avatar_id: string; locale?: string }>(
+      `/api/v1/users/${userId}/avatar`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          avatar_id: avatarId,
+          ...(locale ? { locale } : {}),
+        }),
+      },
+    ),
 
   saveScreening: (
     userId: string,
@@ -115,15 +121,29 @@ export const api = {
   listBookings: (userId: string) =>
     request<{ bookings: Booking[] }>(`/api/v1/bookings?user_id=${userId}`),
 
-  createPracticeSession: (userId: string) =>
+  createPracticeSession: (
+    userId: string,
+    opts?: { avatarId?: string; locale?: string },
+  ) =>
     request<{ session_id: string }>("/api/v1/sessions/practice", {
       method: "POST",
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({
+        user_id: userId,
+        ...(opts?.avatarId ? { avatar_id: opts.avatarId } : {}),
+        ...(opts?.locale ? { locale: opts.locale } : {}),
+      }),
     }),
 
-  startSession: (sessionId: string) =>
+  startSession: (
+    sessionId: string,
+    opts?: { avatarId?: string; locale?: string },
+  ) =>
     request<SessionStartResponse>(`/api/v1/sessions/${sessionId}/start`, {
       method: "POST",
+      body: JSON.stringify({
+        ...(opts?.avatarId ? { avatar_id: opts.avatarId } : {}),
+        ...(opts?.locale ? { locale: opts.locale } : {}),
+      }),
     }),
 
   getSession: (sessionId: string) =>
@@ -134,16 +154,30 @@ export const api = {
       messages: { role: string; content: string }[];
     }>(`/api/v1/sessions/${sessionId}`),
 
-  sessionChat: (sessionId: string, content: string) =>
+  sessionChat: (
+    sessionId: string,
+    content: string,
+    opts?: { avatarId?: string; locale?: string },
+  ) =>
     request<SessionChatResponse>(`/api/v1/sessions/${sessionId}/chat`, {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({
+        content,
+        ...(opts?.avatarId ? { avatar_id: opts.avatarId } : {}),
+        ...(opts?.locale ? { locale: opts.locale } : {}),
+      }),
     }),
 
-  sessionVoice: (sessionId: string, audio: Blob) => {
+  sessionVoice: (
+    sessionId: string,
+    audio: Blob,
+    opts?: { avatarId?: string; locale?: string },
+  ) => {
     const form = new FormData();
     const name = audio.type.includes("wav") ? "utterance.wav" : "utterance.webm";
     form.append("audio", audio, name);
+    if (opts?.avatarId) form.append("avatar_id", opts.avatarId);
+    if (opts?.locale) form.append("locale", opts.locale);
     return request<SessionVoiceResponse>(`/api/v1/sessions/${sessionId}/voice`, {
       method: "POST",
       body: form,
