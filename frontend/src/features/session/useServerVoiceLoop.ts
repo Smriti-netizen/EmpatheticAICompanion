@@ -15,15 +15,19 @@ interface UseServerVoiceLoopArgs {
   speakingRef: React.MutableRefObject<boolean>;
 }
 
-const SPEECH_RMS = 0.03;
-const SILENCE_MS = 900;
-const MIN_SPEECH_MS = 350;
+/** Normal turn-taking while avatar is quiet. */
+const SPEECH_RMS = 0.038;
+const SILENCE_MS = 1100;
+const MIN_SPEECH_MS = 500;
 const MAX_UTTERANCE_MS = 30000;
+/** Barge-in must be louder + sustained so speaker echo doesn't cut TTS. */
+const BARGE_RMS = 0.09;
+const BARGE_HOLD_MS = 320;
 
 /**
  * Full-duplex-ish server voice without Silero/ONNX:
  * mic + RMS → capture utterance → faster-whisper. Detects barge-in so the
- * user can cut off the avatar and be heard immediately.
+ * user can cut off the avatar — but ignores soft speaker bleed.
  */
 export function useServerVoiceLoop({
   active,
@@ -58,6 +62,7 @@ export function useServerVoiceLoop({
     let interrupted = false;
     let speechStartedAt = 0;
     let lastLoudAt = 0;
+    let bargeSince = 0;
 
     function mime() {
       return pickMimeType() || "audio/webm";
@@ -91,13 +96,15 @@ export function useServerVoiceLoop({
         }
       });
       chunks = [];
-      return blob.size > 1200 ? blob : null;
+      // Ignore tiny clips (noise / failed barge) — avoids empty Whisper round-trips.
+      return blob.size > 2400 ? blob : null;
     }
 
     async function finalize() {
       if (sending || !capturing) return;
       capturing = false;
       sending = true;
+      bargeSince = 0;
       setPhase("processing");
       const blob = await stopRecorder();
       speechStartedAt = 0;
@@ -157,21 +164,37 @@ export function useServerVoiceLoop({
         for (let i = 0; i < samples.length; i += 1) sum += samples[i]! * samples[i]!;
         const rms = Math.sqrt(sum / samples.length);
         const now = Date.now();
+        const avatarTalking = speakingRef.current;
+
+        // While avatar speaks: only real barge-in (louder + held), never soft echo.
+        if (avatarTalking && !capturing && !sending) {
+          if (rms > BARGE_RMS) {
+            if (!bargeSince) bargeSince = now;
+            if (now - bargeSince >= BARGE_HOLD_MS) {
+              capturing = true;
+              interrupted = true;
+              speechStartedAt = now;
+              lastLoudAt = now;
+              startRecorder();
+              setPhase("user_speaking");
+              onInterruptRef.current?.();
+            }
+          } else {
+            bargeSince = 0;
+          }
+          return;
+        }
 
         if (rms > SPEECH_RMS) {
           lastLoudAt = now;
+          bargeSince = 0;
 
-          // Barge-in: user talks while avatar is speaking → stop TTS, start capturing.
-          if (!capturing && !sending) {
+          if (!capturing && !sending && !avatarTalking) {
             capturing = true;
             interrupted = false;
             speechStartedAt = now;
             startRecorder();
             setPhase("user_speaking");
-          }
-          if (capturing && speakingRef.current && !interrupted) {
-            interrupted = true;
-            onInterruptRef.current?.();
           }
 
           if (capturing && now - speechStartedAt > MAX_UTTERANCE_MS) {

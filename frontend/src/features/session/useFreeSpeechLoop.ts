@@ -4,6 +4,7 @@ type Phase = "idle" | "listening" | "user_speaking" | "processing";
 
 interface UseFreeSpeechLoopArgs {
   active: boolean;
+  locale?: string | null;
   onUtterance: (transcript: string) => Promise<void>;
 }
 
@@ -15,7 +16,7 @@ interface UseFreeSpeechLoopArgs {
  * We do NOT use custom RMS silence VAD for turn-taking (that stuck in a
  * listening loop with ambient noise / empty transcripts).
  */
-export function useFreeSpeechLoop({ active, onUtterance }: UseFreeSpeechLoopArgs) {
+export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeechLoopArgs) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [partial, setPartial] = useState("");
@@ -119,8 +120,11 @@ export function useFreeSpeechLoop({ active, onUtterance }: UseFreeSpeechLoopArgs
     // continuous=false: Chrome ends when the user pauses (HackerRank-style turns).
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = "en-IN";
-    recognition.maxAlternatives = 1;
+    // en-IN still hears a lot of Hinglish (romanized). Pure Hindi is better via
+    // server Whisper (multilingual model) — browser STT is a fallback only.
+    const loc = (locale || "en-IN").replace("_", "-");
+    recognition.lang = loc.toLowerCase().startsWith("en") ? "en-IN" : loc;
+    recognition.maxAlternatives = 3;
 
     recognition.onstart = () => {
       if (!cancelled && !processing) setPhase("listening");
@@ -206,7 +210,7 @@ export function useFreeSpeechLoop({ active, onUtterance }: UseFreeSpeechLoopArgs
       }
       setPhase("idle");
     };
-  }, [active]);
+  }, [active, locale]);
 
   return {
     phase,
