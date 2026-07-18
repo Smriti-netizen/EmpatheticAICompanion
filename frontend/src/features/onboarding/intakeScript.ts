@@ -51,7 +51,7 @@ const PHQ9_PROMPTS = [
   "Trouble falling or staying asleep, or sleeping too much?",
   "Feeling tired or having little energy?",
   "Poor appetite or overeating?",
-  "Feeling bad about yourself — or that you are a failure?",
+  "Feeling bad about yourself, or that you are a failure?",
   "Trouble concentrating on things?",
   "Moving or speaking slowly, or being fidgety/restless?",
   "Thoughts that you would be better off dead, or of hurting yourself?",
@@ -82,7 +82,7 @@ export function emptyAnswers(): IntakeAnswers {
 export function firstTurn(name: string): BotTurn {
   return {
     id: "welcome",
-    text: `Hi${name ? ` ${name}` : ""}. I’ll ask a few short questions in chat so I understand what you need — then you can pick a counselor and start a session now (about 30 minutes) or schedule one for later. Ready?`,
+    text: `Hi${name ? ` ${name}` : ""}. I’ll ask a few short questions in chat so I understand what you need. Then you can pick a counselor and start a session now (about 30 minutes) or schedule one for later. Ready?`,
     options: [{ label: "Yes, let’s begin", value: "ready" }],
   };
 }
@@ -172,7 +172,7 @@ export function nextTurn(
         turn: {
           id: "prior_therapy",
           text: next.crisis
-            ? "Thank you for trusting me with that — we'll take good care of it together in session. Have you worked with a therapist or counselor before?"
+            ? "Thank you for trusting me with that. We'll take good care of it together in session. Have you worked with a therapist or counselor before?"
             : "Have you worked with a therapist or counselor before?",
           options: [
             { label: "Yes", value: "yes" },
@@ -269,7 +269,7 @@ export function nextTurn(
         turn: {
           id: "summary",
           text: buildSummary(next, phq, gad),
-          options: [{ label: "Looks right — continue", value: "confirm" }],
+          options: [{ label: "Looks right, continue", value: "confirm" }],
         },
       };
     }
@@ -292,13 +292,13 @@ export function nextTurn(
 
 function buildSummary(answers: IntakeAnswers, phq: number, gad: number): string {
   return [
-    "Here’s what I’m hearing — tell me if I missed anything:",
+    "Here’s what I’m hearing. Tell me if I missed anything:",
     `• Focus: ${answers.concerns.join(", ") || "not specified"}`,
     `• Duration: ${answers.duration || "not specified"}`,
     `• Hope for session: ${answers.goal || "not specified"}`,
     `• Prior therapy: ${answers.priorTherapy ? "yes" : "no"}`,
     `• PHQ‑9 score: ${phq} · GAD‑7 score: ${gad}`,
     "",
-    "This is support from an AI counselor — not a licensed therapist, diagnosis, or prescription.",
+    "This is support from an AI counselor, not a licensed therapist, diagnosis, or prescription.",
   ].join("\n");
 }

@@ -11,7 +11,7 @@ export function OptionChips({ options, disabled, onSelect }: OptionChipsProps) {
 
   return (
     <div
-      className="flex flex-wrap gap-2 animate-[fadeSlide_250ms_ease-out]"
+      className="flex flex-wrap gap-2.5"
       role="group"
       aria-label="Suggested replies"
     >
@@ -21,7 +21,7 @@ export function OptionChips({ options, disabled, onSelect }: OptionChipsProps) {
           type="button"
           disabled={disabled}
           onClick={() => onSelect(option)}
-          className="rounded-full border border-accent/25 bg-accent-soft/80 px-3.5 py-2 text-sm font-medium text-ink transition hover:border-accent hover:bg-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+          className="rounded-full border border-line bg-cream px-6 py-3 font-sans text-[12px] leading-none font-medium text-ink not-italic transition hover:border-rose hover:text-rose focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose disabled:opacity-50 sm:px-7 sm:py-3.5"
         >
           {option.label}
         </button>

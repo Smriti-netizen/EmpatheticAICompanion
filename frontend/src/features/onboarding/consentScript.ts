@@ -23,7 +23,7 @@ export function emptyConsent(): ConsentDraft {
 export function firstConsentTurn(): ConsentTurn {
   return {
     id: "hello",
-    text: "Hi — I’m your Empathic Companion guide. I’ll ask a few quick things in chat so we can set up your profile. Ready?",
+    text: "Hi, I’m your Empathic Companion guide. I’ll ask a few quick things in chat so we can set up your profile. Ready?",
     options: [{ label: "Yes, let’s chat", value: "ready" }],
   };
 }
@@ -66,7 +66,7 @@ export function nextConsentTurn(
         createUser: false,
         turn: {
           id: "consent",
-          text: "One important note before we continue: I’m an AI support companion — not a licensed therapist, and I don’t diagnose or prescribe. Reply “I agree” if you’re okay continuing.",
+          text: "One important note before we continue: I’m an AI support companion, not a licensed therapist, and I don’t diagnose or prescribe. Reply “I agree” if you’re okay continuing.",
           options: [{ label: "I agree", value: "agree" }],
           freeText: true,
         },

@@ -37,7 +37,7 @@ export function ChatComposer({
   return (
     <form
       onSubmit={submit}
-      className="flex items-end gap-2 rounded-[1.5rem] border border-line bg-surface p-2 shadow-[0_12px_40px_-28px_rgba(28,43,42,0.55)]"
+      className="flex items-end gap-2 rounded-full border border-line bg-surface py-1.5 pr-1.5 pl-5"
     >
       <label className="sr-only" htmlFor="intake-composer">
         Message
@@ -51,12 +51,12 @@ export function ChatComposer({
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
-        className="max-h-32 min-h-[44px] flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] text-ink outline-none placeholder:text-muted/70 disabled:opacity-50"
+        className="max-h-32 min-h-[48px] flex-1 resize-none bg-transparent py-2.5 font-sans text-[16px] font-medium text-ink outline-none placeholder:text-ink/40 disabled:opacity-50"
       />
       <button
         type="submit"
         disabled={disabled || !value.trim()}
-        className="shrink-0 rounded-[1.1rem] bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+        className="shrink-0 rounded-full bg-rose px-6 py-3 font-sans text-[12px] font-medium text-cream not-italic transition hover:bg-rose-deep disabled:cursor-not-allowed disabled:opacity-40"
       >
         Send
       </button>

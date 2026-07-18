@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { Diamond } from "../../components/Diamond";
 import { ChatBubble } from "./components/ChatBubble";
 import { ChatComposer } from "./components/ChatComposer";
 import { OptionChips } from "./components/OptionChips";
@@ -36,32 +37,24 @@ export function OnboardingChatPage() {
   const progress = Math.min(0.97, answered / 26);
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-paper">
-      <header className="flex items-center gap-3 px-4 pt-4 pb-2 sm:px-6">
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-accent text-xs font-bold text-white shadow-warm-sm">
-          EC
-        </div>
+    <div className="relative flex h-[100dvh] flex-col bg-cream text-ink">
+      <header className="relative flex items-center gap-3 border-b border-line px-4 pt-5 pb-4 sm:px-6">
+        <Diamond size={12} className="mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-ink">Empathic Companion</p>
-          <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+          <p className="font-display text-[17px] font-normal text-ink">Empathic Companion</p>
+          <p className="mt-0.5 font-script text-[14px] font-medium text-ink/55 not-italic">
             Settling in
           </p>
         </div>
       </header>
 
-      {/* Botanical vine that grows left → right instead of a percentage bar. */}
-      <div className="px-4 pb-3 sm:px-6" aria-hidden="true">
-        <div className="relative h-[3px] w-full rounded-full bg-line/60">
+      {/* Thin progress bar (a feeling of momentum, not a step counter). */}
+      <div className="relative px-4 pt-3 sm:px-6" aria-hidden="true">
+        <div className="relative h-[3px] w-full bg-line">
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-sage/80 transition-[width] duration-700 ease-out"
+            className="absolute inset-y-0 left-0 bg-rose transition-[width] duration-700 ease-out"
             style={{ width: `${progress * 100}%` }}
           />
-          <span
-            className="absolute -top-[7px] text-[13px] leading-none text-sage transition-[left] duration-700 ease-out"
-            style={{ left: `calc(${progress * 100}% - 6px)` }}
-          >
-            ❧
-          </span>
         </div>
       </div>
 
@@ -80,7 +73,7 @@ export function OnboardingChatPage() {
         </div>
       </div>
 
-      <div className="border-t border-line/60 bg-surface/90 px-4 py-3 backdrop-blur sm:px-6">
+      <div className="border-t border-line bg-cream px-4 py-4 sm:px-6">
         <div className="mx-auto w-full max-w-2xl">
           {error && (
             <p className="mb-2 text-sm text-crisis" role="alert">

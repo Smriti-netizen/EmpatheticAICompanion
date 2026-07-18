@@ -45,11 +45,11 @@ function clarifyMessage(
 ): string {
   if (kind === "option") {
     return attempt === 0
-      ? "I didn't quite catch that — could you tap one of the options below, or say it in a word?"
-      : "No worries — just pick the closest option below so I record it correctly.";
+      ? "I didn't quite catch that. Could you tap one of the options below, or say it in a word?"
+      : "No worries. Just pick the closest option below so I record it correctly.";
   }
   if (attempt === 0) {
-    return "I want to make sure I understand you — that came through a little jumbled on my end. Could you say it again in a few plain words?";
+    return "I want to make sure I understand you. That came through a little jumbled on my end, so could you say it again in a few plain words?";
   }
   const example =
     turn.id === "concerns"
@@ -74,10 +74,6 @@ type Persisted = {
   messages: ChatMessage[];
   turnIndex: number;
 };
-
-function wait(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 function loadFull(): Persisted | null {
   try {
@@ -221,8 +217,8 @@ export function useOnboardingChat() {
     nextMessages: ChatMessage[],
     kind: "ack" | "question" = "question",
   ) {
-    setTyping(true);
-    await wait(kind === "ack" ? 420 : 560);
+    // No send/reply animation: append the next message immediately.
+    void kind;
     const msg: ChatMessage = {
       id: newMessageId(),
       role: "assistant",
