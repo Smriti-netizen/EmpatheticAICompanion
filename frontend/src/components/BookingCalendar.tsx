@@ -1,4 +1,4 @@
-import type { Slot } from "../types";
+import type { Slot } from "../shared/types/api";
 
 interface BookingCalendarProps {
   slots: Slot[];

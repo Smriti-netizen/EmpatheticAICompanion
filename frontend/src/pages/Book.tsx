@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { api, ApiClientError } from "../api/client";
+import { api, ApiClientError } from "../shared/api/client";
 import { BookingCalendar } from "../components/BookingCalendar";
 import { getUserId } from "../lib/storage";
-import type { Slot } from "../types";
+import type { Slot } from "../shared/types/api";
 
 export function BookPage() {
   const navigate = useNavigate();

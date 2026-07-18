@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { api, ApiClientError } from "../../api/client";
+import { api, ApiClientError } from "../../shared/api/client";
 import { getDisplayName, getUserId } from "../../lib/storage";
 import { pickAcknowledgement } from "./acknowledgements";
 import {

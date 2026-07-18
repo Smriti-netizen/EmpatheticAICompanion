@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { api, ApiClientError } from "../../api/client";
+import { api, ApiClientError } from "../../shared/api/client";
 import { AsciiBloom } from "../../components/AsciiBloom";
 import { Diamond } from "../../components/Diamond";
 import { SessionTimer } from "../../components/SessionTimer";
 import { UserCameraPip } from "../../components/UserCameraPip";
 import { useUserCamera } from "../../hooks/useUserCamera";
-import { getAvatarId, getLocale, setAvatarId, setLocale } from "../../lib/storage";
+import { getAvatarId, getLocale, setAvatarId } from "../../lib/storage";
 import {
   playBase64Audio,
   speakWithBrowserTts,

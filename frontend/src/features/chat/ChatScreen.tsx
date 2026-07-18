@@ -1,4 +1,4 @@
-import { ChatBubble } from "./components/ChatBubble";
+import { ChatBubble } from "../../components/ChatBubble";
 import { ChatInput } from "./components/ChatInput";
 import { CrisisBanner } from "./components/CrisisBanner";
 import { useChatSession } from "./hooks/useChatSession";
@@ -37,7 +37,11 @@ export function ChatScreen() {
             </p>
           )}
           {messages.map((message, index) => (
-            <ChatBubble key={`${message.role}-${index}`} message={message} />
+            <ChatBubble
+              key={`${message.role}-${index}`}
+              message={message}
+              showCounselorLabel
+            />
           ))}
           {loading && (
             <p className="text-sm text-muted italic">Counselor is thinking…</p>

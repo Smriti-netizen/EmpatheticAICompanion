@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Diamond } from "../../components/Diamond";
-import { api, ApiClientError } from "../../api/client";
+import { api, ApiClientError } from "../../shared/api/client";
 import { getAvatarId, getLocale, getUserId, setAvatarId, setLocale } from "../../lib/storage";
 import { SESSION_LOCALES, type SessionLocale } from "../../lib/locales";
 import { AVATAR_PRESETS, getAvatar, type AvatarId } from "./avatarCatalog";

@@ -59,7 +59,6 @@ export function useServerVoiceLoop({
 
     let capturing = false;
     let sending = false;
-    let interrupted = false;
     let speechStartedAt = 0;
     let lastLoudAt = 0;
     let bargeSince = 0;
@@ -172,7 +171,6 @@ export function useServerVoiceLoop({
             if (!bargeSince) bargeSince = now;
             if (now - bargeSince >= BARGE_HOLD_MS) {
               capturing = true;
-              interrupted = true;
               speechStartedAt = now;
               lastLoudAt = now;
               startRecorder();
@@ -191,7 +189,6 @@ export function useServerVoiceLoop({
 
           if (!capturing && !sending && !avatarTalking) {
             capturing = true;
-            interrupted = false;
             speechStartedAt = now;
             startRecorder();
             setPhase("user_speaking");

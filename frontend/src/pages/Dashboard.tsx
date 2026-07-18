@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { api, ApiClientError } from "../api/client";
+import { api, ApiClientError } from "../shared/api/client";
 import { getAvatarId, getLocale, getUserId } from "../lib/storage";
-import type { Booking } from "../types";
+import type { Booking } from "../shared/types/api";
 
 function withinJoinWindow(slotStart: string): boolean {
   const start = new Date(slotStart).getTime();

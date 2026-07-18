@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { api, ApiClientError } from "../../api/client";
+import { api, ApiClientError } from "../../shared/api/client";
 import {
   setConsentAccepted,
   setDisplayName,

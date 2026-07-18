@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { Diamond } from "../../components/Diamond";
-import { ChatBubble } from "./components/ChatBubble";
+import { ChatBubble } from "../../components/ChatBubble";
 import { ChatComposer } from "./components/ChatComposer";
 import { OptionChips } from "./components/OptionChips";
 import { TypingIndicator } from "./components/TypingIndicator";
@@ -66,7 +66,10 @@ export function OnboardingChatPage() {
       >
         <div className="mt-auto space-y-3 pb-4">
           {messages.map((message) => (
-            <ChatBubble key={message.id} role={message.role} text={message.text} />
+            <ChatBubble
+              key={message.id}
+              message={{ role: message.role, content: message.text }}
+            />
           ))}
           {typing && <TypingIndicator />}
           <div ref={bottomRef} />
