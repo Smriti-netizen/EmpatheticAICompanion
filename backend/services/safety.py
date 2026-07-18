@@ -20,11 +20,59 @@ CRISIS_RESPONSE = (
     "You don't have to face this alone."
 )
 
+# Injected into the LLM instead of hard-stopping the session. The counselor
+# stays present and works *with* the person the way a real therapist would.
+CRISIS_CARE_HINT = (
+    "[SAFETY — the client just expressed distress, hopelessness, or thoughts of "
+    "self-harm/suicide]\n"
+    "Do NOT end the conversation, do not become a hotline script, and do not lecture. "
+    "Stay warm, calm, and fully present — this is exactly when they need you.\n"
+    "- First, slow down and acknowledge how much pain they're in without judgment.\n"
+    "- Gently, conversationally check safety: are they thinking of acting on this, do "
+    "they have a plan, are they safe right now? Ask ONE caring question at a time.\n"
+    "- Reflect their feelings, help them feel less alone, and look for reasons for "
+    "living and small next-step coping (grounding, reaching a trusted person, getting "
+    "through the next hour).\n"
+    "- Only if they describe being in immediate danger or having a concrete plan, gently "
+    "weave in that they can reach Tele-MANAS (14416) or emergency (112) — as an option "
+    "offered with care, not a dismissal. Otherwise keep supporting them yourself.\n"
+    "- Never say you can't help or that they must go elsewhere. Keep the door open."
+)
+
 OUTPUT_BLOCK = [
     re.compile(r"\b(you have|you are diagnosed with)\s+(depression|anxiety|bipolar|ptsd|adhd)", re.I),
     re.compile(r"\b\d+\s*mg\b", re.I),
     re.compile(r"\bprescribe\b", re.I),
 ]
+
+# Warm fallback shown when the model produces garbled/unusable output. Pairs
+# with the frontend ASCII-bloom so the user never sees raw broken text.
+MODEL_GATHER_FALLBACK = "I want to say this right — give me a moment."
+
+_REPEATED_CHAR = re.compile(r"(.)\1{6,}")  # same char 7+ times in a row
+_SYMBOL_RUN = re.compile(r"[^\w\s]{5,}")  # long run of punctuation/symbols
+_REAL_WORD = re.compile(r"[A-Za-z]{2,}")
+
+
+def looks_malformed(text: str) -> bool:
+    """Basic sanity check on AI output before it's ever shown to the user.
+
+    Flags empty, too-short, symbol-heavy, or repetitive junk so the caller can
+    retry once and fall back to a warm holding message.
+    """
+    if not text:
+        return True
+    t = text.strip()
+    if len(t) < 3:
+        return True
+    if len(_REAL_WORD.findall(t)) < 1:
+        return True
+    letters = sum(c.isalpha() for c in t)
+    if letters / len(t) < 0.4:  # mostly numbers/symbols
+        return True
+    if _REPEATED_CHAR.search(t) or _SYMBOL_RUN.search(t):
+        return True
+    return False
 
 
 def is_crisis(text: str) -> bool:

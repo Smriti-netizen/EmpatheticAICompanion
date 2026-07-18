@@ -13,7 +13,13 @@ from services import avatar_hints
 from services.ids import new_id, utc_now_iso
 from services.memory import build_memory_block_for_user
 from services.ollama_client import OllamaError, chat as ollama_chat
-from services.safety import CRISIS_RESPONSE, filter_output, is_crisis
+from services.safety import (
+    CRISIS_CARE_HINT,
+    MODEL_GATHER_FALLBACK,
+    filter_output,
+    is_crisis,
+    looks_malformed,
+)
 from services.summarizer import summarize_session
 
 
@@ -89,7 +95,11 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
     )
     db.flush()
 
-    if is_crisis(content):
+    # Distress/self-harm no longer hard-stops the session. We log it for the
+    # clinical record, then let the counselor stay present and respond with a
+    # safety-aware, therapist-style approach (guidance injected below).
+    crisis_signal = is_crisis(content)
+    if crisis_signal:
         db.add(
             SafetyEvent(
                 session_id=session.id,
@@ -99,23 +109,6 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
                 created_at=now,
             )
         )
-        session.status = "crisis"
-        db.add(
-            Message(
-                id=new_id(),
-                session_id=session.id,
-                role="assistant",
-                content=CRISIS_RESPONSE,
-                created_at=utc_now_iso(),
-            )
-        )
-        db.commit()
-        return {
-            "reply": CRISIS_RESPONSE,
-            "crisis": True,
-            "expression": "concerned",
-            "remaining_sec": remaining,
-        }
 
     history = db.scalars(
         select(Message)
@@ -149,13 +142,29 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
 
     system_extra = memory
     if wrap_hint:
-        system_extra = f"{memory}\n\n[SESSION TIMER]\n{wrap_hint}"
+        system_extra = f"{system_extra}\n\n[SESSION TIMER]\n{wrap_hint}"
+    if crisis_signal:
+        system_extra = f"{system_extra}\n\n{CRISIS_CARE_HINT}"
 
     if not turns or turns[-1]["role"] != "user":
         raise SessionServiceError("No user message to respond to", 400)
 
     try:
         reply = await ollama_chat(turns, system_extra=system_extra)
+        # Never surface garbled output. Retry once, then hold with a warm line.
+        if looks_malformed(reply):
+            reply = await ollama_chat(turns, system_extra=system_extra)
+            if looks_malformed(reply):
+                db.add(
+                    SafetyEvent(
+                        session_id=session.id,
+                        user_id=session.user_id,
+                        event_type="output_malformed",
+                        trigger_source=reply[:500],
+                        created_at=utc_now_iso(),
+                    )
+                )
+                reply = MODEL_GATHER_FALLBACK
     except OllamaError as exc:
         db.rollback()
         raise SessionServiceError(str(exc), 503) from exc
@@ -185,8 +194,9 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
     db.commit()
     return {
         "reply": reply,
+        # No hard redirect — the counselor handles distress in-session.
         "crisis": False,
-        "expression": avatar_hints.from_text(reply),
+        "expression": avatar_hints.from_text(reply, crisis=crisis_signal),
         "remaining_sec": remaining_seconds(session),
     }
 

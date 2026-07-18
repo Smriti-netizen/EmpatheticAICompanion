@@ -14,29 +14,31 @@ async def health_check():
     piper = tts_piper.status()
     tts_status = tts.status()
     tts_engine = tts.engine()
+    payload = {
+        "api": "up",
+        "whisper": whisper,
+        "whisper_error": stt_whisper.last_error(),
+        "piper": piper,
+        "tts": tts_status,
+        "tts_engine": tts_engine,
+        "model": settings.ollama_model,
+    }
     try:
         ollama = await ollama_health()
-        return {
-            "api": "up",
-            "ollama": ollama.get("ollama", "up"),
-            "model_loaded": ollama.get("model_loaded", False),
-            "whisper": whisper,
-            "piper": piper,
-            "tts": tts_status,
-            "tts_engine": tts_engine,
-            "models": ollama.get("models", []),
-            "model": settings.ollama_model,
-        }
+        payload.update(
+            {
+                "ollama": ollama.get("ollama", "up"),
+                "model_loaded": ollama.get("model_loaded", False),
+                "models": ollama.get("models", []),
+            }
+        )
     except OllamaError as exc:
-        return {
-            "api": "up",
-            "ollama": "down",
-            "model_loaded": False,
-            "whisper": whisper,
-            "piper": piper,
-            "tts": tts_status,
-            "tts_engine": tts_engine,
-            "models": [],
-            "model": settings.ollama_model,
-            "error": str(exc),
-        }
+        payload.update(
+            {
+                "ollama": "down",
+                "model_loaded": False,
+                "models": [],
+                "error": str(exc),
+            }
+        )
+    return payload

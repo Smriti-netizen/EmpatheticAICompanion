@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from config import settings
-from db.models import Booking, CounselingSession, User, UserProfile
+from db.models import Booking, CounselingSession, User
 from db.session import get_db
 from services.ids import new_id, utc_now_iso
 from services.scheduler import can_cancel, generate_slots, parse_iso, to_iso
@@ -65,10 +65,6 @@ def create_booking(body: BookRequest, db: Session = Depends(get_db)):
     user = db.get(User, body.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    profile = db.get(UserProfile, body.user_id)
-    if profile and profile.crisis_screen_positive:
-        raise HTTPException(status_code=403, detail="Booking blocked after positive crisis screen")
 
     existing = db.scalars(
         select(Booking).where(Booking.slot_start == body.slot_start, Booking.status == "booked")

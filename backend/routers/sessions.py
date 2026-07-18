@@ -26,7 +26,7 @@ class PracticeSessionRequest(BaseModel):
 
 @router.post("/practice")
 def create_practice_session(body: PracticeSessionRequest, db: Session = Depends(get_db)):
-    """Local/dev helper: create a session joinable immediately (no calendar wait)."""
+    """Start-now session: joinable immediately, 30 minutes long."""
     user = db.get(User, body.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -38,7 +38,7 @@ def create_practice_session(body: PracticeSessionRequest, db: Session = Depends(
         booking_id=None,
         status="scheduled",
         scheduled_at=now,
-        duration_target_sec=settings.session_duration_sec,
+        duration_target_sec=settings.session_practice_duration_sec,
     )
     db.add(session)
     db.commit()
