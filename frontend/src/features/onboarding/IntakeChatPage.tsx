@@ -30,22 +30,22 @@ export function IntakeChatPage() {
   }, [messages, typing, chips]);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 pb-6 pt-8 sm:px-6">
-      <header className="mb-6">
-        <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
+    <div className="mx-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:max-w-3xl sm:px-6 sm:pt-8 lg:px-8">
+      <header className="mb-4 shrink-0 sm:mb-6">
+        <p className="text-[11px] font-medium tracking-[0.16em] text-accent uppercase sm:text-xs">
           Empathic Companion
         </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+        <h1 className="mt-1.5 font-display text-[1.5rem] font-semibold tracking-tight text-ink sm:mt-2 sm:text-3xl lg:text-4xl">
           A short conversation to begin
         </h1>
-        <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-lg text-[13px] leading-relaxed text-muted sm:mt-2 sm:text-sm">
           I’ll ask one thing at a time — like chatting with an assistant, not filling a form.
         </p>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[1.75rem] border border-line/70 bg-surface/70 backdrop-blur-sm">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-line/70 bg-surface/70 backdrop-blur-sm sm:rounded-[1.75rem]">
         <div
-          className="flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-5"
+          className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-5"
           role="log"
           aria-live="polite"
           aria-relevant="additions"
@@ -60,15 +60,15 @@ export function IntakeChatPage() {
           <div ref={bottomRef} />
         </div>
 
-        <div className="border-t border-line/60 px-4 py-4 sm:px-5">
+        <div className="shrink-0 border-t border-line/60 px-3 py-3 sm:px-5 sm:py-4">
           {error && (
-            <p className="mb-3 text-sm text-crisis" role="alert">
+            <p className="mb-2 text-sm text-crisis sm:mb-3" role="alert">
               {error}
             </p>
           )}
 
           {chips.length > 0 && (
-            <div className="mb-3">
+            <div className="mb-2.5 max-h-[26dvh] overflow-y-auto overscroll-contain sm:mb-3 sm:max-h-none">
               <OptionChips
                 options={chips}
                 disabled={busy || typing}
@@ -84,7 +84,7 @@ export function IntakeChatPage() {
             onChange={setDraft}
             onSend={sendText}
           />
-          <p className="mt-2 text-center text-[11px] text-muted/80">
+          <p className="mt-2 text-center text-[10px] text-muted/80 sm:text-[11px]">
             Press Enter to send · Shift+Enter for a new line
           </p>
         </div>
