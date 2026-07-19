@@ -93,23 +93,21 @@ def _mostly_latin(text: str) -> bool:
 
 
 def _lang_from(text: str, locale: str | None) -> str:
-    """Resolve TTS language key from text script, then user locale."""
+    """Resolve TTS language from session locale; script only refines Indic.
+
+    Important: Hinglish is often Latin-script. Do NOT flip a Hindi (or other
+    Indic) session to an English voice just because the reply has no Devanagari.
+    """
+    loc = (locale or "en-IN").lower().replace("_", "-")
     sample = text or ""
+
     for pattern, lang in _SCRIPT_LANG:
         if pattern.search(sample):
             # Devanagari: prefer Marathi when locale is mr-*, else Hindi.
             if lang == "hi":
-                loc = (locale or "").lower().replace("_", "-")
                 if loc.startswith("mr"):
                     return "mr"
             return lang
-
-    loc = (locale or "en-IN").lower().replace("_", "-")
-    # English / Latin replies should not be forced through Indic voices.
-    if _mostly_latin(sample):
-        if loc.startswith("en-in") or not loc.startswith("en"):
-            return "en-in"
-        return "en"
 
     if loc.startswith("en-in"):
         return "en-in"
@@ -118,6 +116,9 @@ def _lang_from(text: str, locale: str | None) -> str:
     prefix = loc.split("-", 1)[0]
     if prefix in _SUPPORTED_LANGS:
         return prefix
+    # Latin-only text with unknown locale → Indian English, not US English.
+    if _mostly_latin(sample):
+        return "en-in"
     return "en"
 
 

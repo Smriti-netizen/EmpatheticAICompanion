@@ -69,11 +69,15 @@ async def start(
     try:
         from services.voice_audio import attach_tts, sync_session_voice_prefs
 
-        payload = await start_session(db, session_id)
         prefs = body or StartSessionRequest()
+        # Companion name goes into the spoken intro (Milo / Coco / Ziggy).
+        payload = await start_session(db, session_id, avatar_id=prefs.avatar_id)
         voice_key, locale = sync_session_voice_prefs(
             db, session_id, prefs.avatar_id, prefs.locale
         )
+        # Always attach opening TTS. Strict Mode double-/start is fine: the
+        # frontend bootGen only lets one mount speak, and sessionStorage
+        # prevents re-playing after a mid-session refresh.
         return await attach_tts(
             payload, payload.get("opening_message"), voice_key, locale=locale
         )
