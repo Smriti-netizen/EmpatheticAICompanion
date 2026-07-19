@@ -8,30 +8,30 @@ export function ChatScreen() {
     useChatSession();
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-8 sm:px-6">
-      <header className="mb-6">
-        <p className="text-sm font-medium tracking-[0.14em] text-accent uppercase">
+    <div className="mx-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden px-3 py-4 sm:max-w-3xl sm:px-6 sm:py-6 lg:max-w-3xl lg:px-8 lg:py-8">
+      <header className="mb-3 shrink-0 sm:mb-5">
+        <p className="text-[11px] font-medium tracking-[0.14em] text-accent uppercase sm:text-sm">
           Empathic Companion
         </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-ink sm:text-4xl">
+        <h1 className="mt-1.5 font-display text-[1.5rem] font-semibold text-ink sm:mt-2 sm:text-3xl lg:text-4xl">
           A quiet space to talk
         </h1>
-        <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-muted sm:mt-2 sm:text-sm">
           AI counseling support — not a replacement for professional mental
           health care. First replies may take 15–30 seconds on CPU.
         </p>
       </header>
 
       {crisis && (
-        <div className="mb-4">
+        <div className="mb-3 shrink-0 sm:mb-4">
           <CrisisBanner />
         </div>
       )}
 
-      <section className="flex min-h-[420px] flex-1 flex-col rounded-[28px] border border-line bg-surface/90 p-4 shadow-[0_20px_60px_-40px_rgba(28,43,42,0.45)] sm:p-5">
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+      <section className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-line bg-surface/90 p-3 shadow-[0_20px_60px_-40px_rgba(28,43,42,0.45)] sm:rounded-[28px] sm:p-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-0.5">
           {messages.length === 0 && !loading && (
-            <p className="m-auto max-w-sm text-center text-sm text-muted">
+            <p className="m-auto max-w-sm px-2 text-center text-sm text-muted">
               Whenever you’re ready, share what’s been hardest lately. I’m here
               to listen.
             </p>
@@ -49,7 +49,7 @@ export function ChatScreen() {
         </div>
 
         {error && (
-          <div className="mt-3 flex items-start justify-between gap-3 rounded-xl border border-[#e4b4ae] bg-crisis-bg px-3 py-2 text-sm text-crisis">
+          <div className="mt-3 flex shrink-0 items-start justify-between gap-3 rounded-xl border border-[#e4b4ae] bg-crisis-bg px-3 py-2 text-sm text-crisis">
             <p>{error}</p>
             <button
               type="button"
@@ -61,7 +61,7 @@ export function ChatScreen() {
           </div>
         )}
 
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="mt-3 shrink-0 border-t border-line pt-3 sm:mt-4 sm:pt-4">
           <ChatInput disabled={loading || crisis} onSend={sendMessage} />
         </div>
       </section>
