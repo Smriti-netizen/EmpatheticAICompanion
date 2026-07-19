@@ -48,6 +48,14 @@ def on_startup() -> None:
     except Exception as exc:
         logger.warning("Voice warm-up failed: %s", exc)
 
+    # Keep EddyGiusepe / empathic-counselor loaded like an interactive `ollama run`.
+    try:
+        from services.ollama_client import warm_model
+
+        warm_model()
+    except Exception as exc:
+        logger.warning("Ollama warm-up failed: %s", exc)
+
 @app.get("/")
 async def root():
     return {"service": "empathic-companion", "docs": "/docs", "version": "0.2.0"}
