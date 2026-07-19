@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from db.models import Screening, User, UserProfile
 from db.session import get_db
 from services.ids import new_id, utc_now_iso
-from services.locales import SUPPORTED_LOCALES, normalize_locale
+from services.locales import normalize_locale
 from services.scoring import score_items, validate_screening_items
 
 router = APIRouter(prefix="/api/v1/users", tags=["intake"])
@@ -79,15 +79,7 @@ def set_avatar(user_id: str, body: AvatarRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="User not found")
 
     if body.locale is not None:
-        raw = (body.locale or "").replace("_", "-")
-        prefix = raw.split("-", 1)[0].lower()
-        if raw not in SUPPORTED_LOCALES and prefix not in {
-            "en", "hi", "bn", "ta", "te", "mr", "gu", "kn", "ml",
-        }:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported locale. Choose one of: {', '.join(sorted(SUPPORTED_LOCALES))}",
-            )
+        # English-only replies for quality; coerce any old locale to en-IN.
         user.locale = normalize_locale(body.locale)
 
     now = utc_now_iso()
