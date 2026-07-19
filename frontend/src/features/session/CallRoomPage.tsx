@@ -412,27 +412,79 @@ export function CallRoomPage() {
         ? "#5c7a5e"
         : "#8a8071";
 
+  // End-session is its own full page — not squeezed under the Meet tile.
+  if (summary) {
+    return (
+      <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-cream text-ink pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex w-full min-h-0 max-w-xl flex-1 flex-col items-center overflow-y-auto overscroll-contain px-4 py-8 text-center sm:max-w-2xl sm:px-6 sm:py-12 lg:max-w-3xl lg:px-8 lg:py-16">
+          <div className="mb-5 flex gap-2 sm:mb-7">
+            <Diamond size={8} />
+            <Diamond size={8} color="var(--color-forest)" />
+            <Diamond size={8} color="var(--color-dusk)" />
+          </div>
+          <h2 className="max-w-[34rem] font-display text-[1.6rem] leading-[1.2] font-normal sm:text-[2.15rem] lg:text-[2.4rem]">
+            You&apos;ve had a{" "}
+            <span className="font-script text-rose italic">gentle</span> session.
+          </h2>
+          <p className="mt-4 max-w-[28rem] text-[14px] leading-[1.65] text-ink/65 sm:mt-5 sm:text-[15px] lg:max-w-[32rem]">
+            {summary.summary}
+          </p>
+          <p className="mt-4 max-w-[28rem] text-[14px] leading-[1.65] text-ink/80 sm:text-[15px] lg:max-w-[32rem]">
+            <span className="font-mono text-[11px] tracking-[0.06em] text-rose uppercase sm:text-[12px]">
+              A small step to try
+            </span>
+            <br />
+            {summary.homework}
+          </p>
+          <div className="mt-8 flex w-full max-w-md flex-col items-stretch gap-3 pb-4 sm:mt-10 sm:max-w-lg sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4">
+            <button
+              type="button"
+              onClick={() => navigate("/book")}
+              className="border border-forest bg-forest px-5 py-3.5 font-mono text-[12px] tracking-[0.05em] text-cream uppercase transition hover:opacity-90 sm:px-6 sm:text-[13px]"
+            >
+              Book next session
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="border border-line px-5 py-3.5 font-mono text-[12px] tracking-[0.05em] text-ink uppercase transition hover:border-ink/40 sm:px-6 sm:text-[13px]"
+            >
+              Exit to home
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              className="py-2 text-[14px] text-ink/60 underline underline-offset-4 transition hover:text-ink"
+            >
+              Your sessions
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#1C1815] text-cream pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {needsAudioTap && (
         <button
           type="button"
           onClick={() => void resumePendingAudio()}
-          className="absolute inset-0 z-50 grid place-items-center bg-[#1C1815]/72 px-6 backdrop-blur-[2px]"
+          className="absolute inset-0 z-50 grid place-items-center bg-[#1C1815]/72 px-4 backdrop-blur-[2px] sm:px-6"
         >
-          <span className="max-w-xs border border-cream/25 bg-[#2b2622] px-6 py-5 text-center font-display text-[18px] leading-snug text-cream">
+          <span className="max-w-xs border border-cream/25 bg-[#2b2622] px-5 py-4 text-center font-display text-[16px] leading-snug text-cream sm:px-6 sm:py-5 sm:text-[18px]">
             Tap to hear {preset.name}
           </span>
         </button>
       )}
 
-      <header className="flex shrink-0 items-center justify-between gap-3 px-3 py-3 sm:px-6 sm:py-4">
+      <header className="flex shrink-0 items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-4">
         <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <span
             className="inline-block h-[7px] w-[7px] shrink-0 rounded-full"
             style={{ background: statusColor, boxShadow: `0 0 10px ${statusColor}` }}
           />
-          <p className="truncate font-mono text-[12px] tracking-[0.04em] text-cream/85">
+          <p className="truncate font-mono text-[11px] tracking-[0.04em] text-cream/85 sm:text-[12px]">
             {preset.name}
           </p>
           <span className="hidden font-mono text-[11px] tracking-[0.05em] text-dusk uppercase sm:inline">
@@ -447,173 +499,126 @@ export function CallRoomPage() {
         </div>
       </header>
 
-      <div className="relative mx-2 min-h-0 flex-1 overflow-hidden rounded-[8px] border border-cream/12 sm:mx-5 md:mx-6">
-        <LiveCatAvatar
-          avatarId={avatarId}
-          expression={expression}
-          amplitude={amplitude}
-          speaking={speaking}
-          listening={isListening}
-          greeting={greeting}
-          variant="fill"
-        />
-        <FlourishCorners />
+      {/* Meet-style stage: one 4:3 tile that scales to any screen. */}
+      <div className="relative mx-2 flex min-h-0 flex-1 items-center justify-center sm:mx-5 md:mx-6">
+        <div className="relative aspect-[4/3] h-full max-h-full w-auto max-w-full overflow-hidden rounded-[8px] border border-cream/12 bg-[#1C1815]">
+          <LiveCatAvatar
+            avatarId={avatarId}
+            expression={expression}
+            amplitude={amplitude}
+            speaking={speaking}
+            listening={isListening}
+            greeting={greeting}
+            variant="fill"
+          />
+          <FlourishCorners />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 bg-gradient-to-t from-[#1C1815]/95 via-[#1C1815]/45 to-transparent px-3 pt-16 pb-4 sm:px-4 sm:pt-20 sm:pb-6">
-          {busy ? (
-            <AsciiBloom label="Let me gather my thoughts." tone="cream" />
-          ) : (
-            showCaptions && (
-              <p className="max-w-lg text-center font-display text-[15px] leading-[1.45] font-light text-cream/92 sm:text-[18px] sm:leading-[1.5]">
-                {caption || (isListening ? "I'm listening, take your time." : "...")}
-              </p>
-            )
-          )}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 bg-gradient-to-t from-[#1C1815]/95 via-[#1C1815]/45 to-transparent px-2 pt-12 pb-3 sm:px-4 sm:pt-20 sm:pb-6">
+            {busy ? (
+              <AsciiBloom label="Let me gather my thoughts." tone="cream" />
+            ) : (
+              showCaptions && (
+                <p className="max-w-lg px-1 text-center font-display text-[13px] leading-[1.45] font-light text-cream/92 sm:text-[18px] sm:leading-[1.5]">
+                  {caption || (isListening ? "I'm listening, take your time." : "...")}
+                </p>
+              )
+            )}
+          </div>
+
+          <UserCameraPip
+            videoRef={camera.videoRef}
+            enabled={camera.enabled}
+            onToggle={() => void camera.toggle()}
+          />
         </div>
-
-        <span className="absolute bottom-3 left-3 z-20 bg-ink/45 px-2.5 py-1 font-mono text-[10px] tracking-[0.04em] text-cream backdrop-blur sm:bottom-4 sm:left-4 sm:px-3 sm:py-1.5 sm:text-[11px]">
-          {preset.name}
-        </span>
-
-        <UserCameraPip
-          videoRef={camera.videoRef}
-          enabled={camera.enabled}
-          onToggle={() => void camera.toggle()}
-        />
       </div>
 
       {(error || serverLoop.error || speech.error || camera.error) && (
-        <p className="shrink-0 px-3 pt-2 text-center font-mono text-[11px] text-rose sm:px-8 sm:text-[12px]">
+        <p className="shrink-0 px-3 pt-1.5 text-center font-mono text-[10px] text-rose sm:px-8 sm:pt-2 sm:text-[12px]">
           {error || serverLoop.error || speech.error || camera.error}
         </p>
       )}
 
-      {summary ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-cream px-5 py-10 text-center text-ink sm:px-6 sm:py-14">
-          <div className="mb-6 flex gap-2 sm:mb-7">
-            <Diamond size={8} />
-            <Diamond size={8} color="var(--color-forest)" />
-            <Diamond size={8} color="var(--color-dusk)" />
-          </div>
-          <h2 className="max-w-[520px] font-display text-[28px] leading-[1.2] font-normal sm:text-[38px]">
-            You've had a <span className="font-script text-rose italic">gentle</span> session.
-          </h2>
-          <p className="mt-4 max-w-[440px] text-[14px] leading-[1.6] text-ink/65 sm:text-[15px]">
-            {summary.summary}
-          </p>
-          <p className="mt-4 max-w-[440px] text-[14px] leading-[1.6] text-ink/80 sm:text-[15px]">
-            <span className="font-mono text-[12px] tracking-[0.06em] text-rose uppercase">
-              A small step to try
-            </span>
-            <br />
-            {summary.homework}
-          </p>
-          <div className="mt-8 flex w-full max-w-md flex-col items-stretch gap-3 sm:mt-9 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4">
-            <button
-              type="button"
-              onClick={() => navigate("/book")}
-              className="border border-forest bg-forest px-6 py-3.5 font-mono text-[13px] tracking-[0.05em] text-cream uppercase transition hover:opacity-90"
-            >
-              Book next session
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="border border-line px-6 py-3.5 font-mono text-[13px] tracking-[0.05em] text-ink uppercase transition hover:border-ink/40"
-            >
-              Exit to home
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard")}
-              className="py-2 text-[14px] text-ink/60 underline underline-offset-4 transition hover:text-ink"
-            >
-              Your sessions
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex shrink-0 flex-col items-center gap-3 px-3 py-3 sm:gap-4 sm:px-8 sm:py-5">
-          <p className="font-mono text-[10px] tracking-[0.06em] text-cream/50 uppercase sm:text-[11px]">
-            {voiceHint}
-          </p>
+      <div className="flex shrink-0 flex-col items-center gap-2.5 px-3 py-2.5 sm:gap-4 sm:px-8 sm:py-5">
+        <p className="font-mono text-[10px] tracking-[0.06em] text-cream/50 uppercase sm:text-[11px]">
+          {voiceHint}
+        </p>
 
-          {!busy && (
-            <MoodChips
-              selected={mood}
-              onPick={(label) => {
-                setMood(label);
-                void handleUtterance(`Right now I'm feeling ${label.toLowerCase()}.`);
-              }}
+        {!busy && (
+          <MoodChips
+            selected={mood}
+            onPick={(label) => {
+              setMood(label);
+              void handleUtterance(`Right now I'm feeling ${label.toLowerCase()}.`);
+            }}
+          />
+        )}
+
+        {!serverVoice && listenActive && !busy && (
+          <button
+            type="button"
+            disabled={!speech.partial}
+            onClick={() => speech.forceEndTurn()}
+            className="border border-cream/20 bg-[#2b2622] px-4 py-2 font-mono text-[10px] tracking-[0.05em] text-cream uppercase transition hover:border-cream/40 disabled:opacity-40 sm:px-6 sm:py-2.5 sm:text-[12px]"
+          >
+            Send what I said
+          </button>
+        )}
+
+        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4">
+          <RoundControl
+            label={showCaptions ? "Hide captions" : "Show captions"}
+            active={showCaptions}
+            onClick={() => setShowCaptions((v) => !v)}
+          >
+            <CaptionIcon />
+          </RoundControl>
+
+          <RoundControl
+            label={showType ? "Hide keyboard" : "Type instead"}
+            active={showType}
+            onClick={() => setShowType((v) => !v)}
+          >
+            <KeyboardIcon />
+          </RoundControl>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void endCall()}
+            aria-label="End session"
+            className="grid h-11 min-w-[6.5rem] place-items-center rounded-full bg-rose px-4 py-2.5 font-mono text-[11px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep disabled:opacity-50 sm:h-12 sm:min-w-[7.5rem] sm:px-7 sm:text-[13px]"
+          >
+            End session
+          </button>
+        </div>
+
+        {showType && (
+          <form
+            className="flex w-full max-w-lg gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!draft.trim()) return;
+              const text = draft.trim();
+              setDraft("");
+              void handleUtterance(text);
+            }}
+          >
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              className="min-w-0 flex-1 border border-cream/20 bg-[#2b2622] px-3 py-2.5 text-[15px] text-cream outline-none placeholder:text-cream/40 focus:border-dusk sm:px-4 sm:py-3"
+              placeholder="Type your message..."
             />
-          )}
-
-          {!serverVoice && listenActive && !busy && (
             <button
-              type="button"
-              disabled={!speech.partial}
-              onClick={() => speech.forceEndTurn()}
-              className="border border-cream/20 bg-[#2b2622] px-5 py-2 font-mono text-[11px] tracking-[0.05em] text-cream uppercase transition hover:border-cream/40 disabled:opacity-40 sm:px-6 sm:py-2.5 sm:text-[12px]"
+              type="submit"
+              className="shrink-0 bg-rose px-3 py-2.5 font-mono text-[11px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep sm:px-5 sm:py-3 sm:text-[12px]"
             >
-              Send what I said
+              Send
             </button>
-          )}
-
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <RoundControl
-              label={showCaptions ? "Hide captions" : "Show captions"}
-              active={showCaptions}
-              onClick={() => setShowCaptions((v) => !v)}
-            >
-              <CaptionIcon />
-            </RoundControl>
-
-            <RoundControl
-              label={showType ? "Hide keyboard" : "Type instead"}
-              active={showType}
-              onClick={() => setShowType((v) => !v)}
-            >
-              <KeyboardIcon />
-            </RoundControl>
-
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void endCall()}
-              aria-label="End session"
-              className="grid h-12 min-w-[7.5rem] place-items-center rounded-full bg-rose px-5 py-3 font-mono text-[12px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep disabled:opacity-50 sm:min-w-0 sm:px-7 sm:text-[13px]"
-            >
-              End session
-            </button>
-          </div>
-
-          {showType && (
-            <form
-              className="flex w-full max-w-lg gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!draft.trim()) return;
-                const text = draft.trim();
-                setDraft("");
-                void handleUtterance(text);
-              }}
-            >
-              <input
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                className="min-w-0 flex-1 border border-cream/20 bg-[#2b2622] px-3 py-2.5 text-[15px] text-cream outline-none placeholder:text-cream/40 focus:border-dusk sm:px-4 sm:py-3"
-                placeholder="Type your message..."
-              />
-              <button
-                type="submit"
-                className="shrink-0 bg-rose px-4 py-2.5 font-mono text-[12px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep sm:px-5 sm:py-3"
-              >
-                Send
-              </button>
-            </form>
-          )}
-        </div>
-      )}
+          </form>
+        )}
+      </div>
     </div>
   );
 }
@@ -636,7 +641,7 @@ function MoodChips({
             key={label}
             type="button"
             onClick={() => onPick(label)}
-            className={`border px-3.5 py-1.5 font-mono text-[11px] tracking-[0.05em] uppercase transition active:scale-95 ${
+            className={`border px-2.5 py-1.5 font-mono text-[10px] tracking-[0.05em] uppercase transition active:scale-95 sm:px-3.5 sm:text-[11px] ${
               active
                 ? "border-rose text-rose"
                 : "border-cream/20 text-cream/70 hover:border-cream/40"
