@@ -199,24 +199,66 @@ async def synthesize_async(
         raise ValueError("Nothing to synthesize")
 
     lang = _lang_from(cleaned, locale)
+    primary = _voice_for(voice_key, lang)
 
     try:
         import edge_tts  # noqa: F401
 
-        return await _edge_synthesize(cleaned, voice_key, lang), "audio/mpeg"
+        return await _edge_speak(cleaned, primary), "audio/mpeg"
     except Exception as exc:
-        logger.warning("edge-tts failed (%s); trying Piper fallback", exc)
+        logger.warning(
+            "edge-tts failed voice=%s lang=%s persona=%s (%s); trying same-gender fallback",
+            primary.get("voice"),
+            lang,
+            voice_key,
+            exc,
+        )
 
-    if tts_piper.status() == "ready":
+    # Language switch often breaks Indic Neural voices. Retry in English with the
+    # SAME persona gender so Coco never drops to Piper/male browser default.
+    for retry_lang in ("en-in", "en"):
+        if retry_lang == lang:
+            continue
+        alt = _voice_for(voice_key, retry_lang)
+        if alt["voice"] == primary["voice"]:
+            continue
+        try:
+            logger.info(
+                "TTS retry persona=%s lang=%s→%s voice=%s",
+                voice_key,
+                lang,
+                retry_lang,
+                alt["voice"],
+            )
+            return await _edge_speak(cleaned, alt), "audio/mpeg"
+        except Exception as retry_exc:
+            logger.warning("edge-tts retry failed (%s)", retry_exc)
+
+    # Absolute last edge attempt by gender (never Madhur for Coco).
+    hard = (
+        {"voice": "en-US-AriaNeural", "rate": "-4%", "pitch": "+0Hz"}
+        if voice_key == "aura"
+        else {"voice": "en-US-AndrewNeural", "rate": "-6%", "pitch": "-3Hz"}
+        if voice_key == "hop"
+        else {"voice": "en-GB-RyanNeural", "rate": "-2%", "pitch": "+0Hz"}
+        if voice_key == "spark"
+        else {"voice": "en-US-JennyNeural", "rate": "-4%", "pitch": "+0Hz"}
+    )
+    try:
+        return await _edge_speak(cleaned, hard), "audio/mpeg"
+    except Exception as hard_exc:
+        logger.warning("edge-tts hard fallback failed (%s)", hard_exc)
+
+    # Piper is a single shared voice (usually male) — never use it for Coco.
+    if voice_key != "aura" and tts_piper.status() == "ready":
         return tts_piper.synthesize(cleaned), "audio/wav"
 
     raise RuntimeError("No TTS engine available")
 
 
-async def _edge_synthesize(text: str, voice_key: str | None, lang: str) -> bytes:
+async def _edge_speak(text: str, v: dict[str, str]) -> bytes:
     import edge_tts
 
-    v = _voice_for(voice_key, lang)
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "out.mp3"
         communicate = edge_tts.Communicate(
@@ -227,3 +269,7 @@ async def _edge_synthesize(text: str, voice_key: str | None, lang: str) -> bytes
         )
         await communicate.save(str(out))
         return out.read_bytes()
+
+
+async def _edge_synthesize(text: str, voice_key: str | None, lang: str) -> bytes:
+    return await _edge_speak(text, _voice_for(voice_key, lang))
