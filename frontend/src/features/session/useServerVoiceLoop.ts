@@ -15,7 +15,7 @@ interface UseServerVoiceLoopArgs {
   speakingRef: React.MutableRefObject<boolean>;
 }
 
-/** Normal turn-taking while avatar is quiet. */
+/** Normal turn-taking while avatar is quiet (backup — explicit Done wins). */
 const SPEECH_RMS = 0.038;
 const SILENCE_MS = 1100;
 const MIN_SPEECH_MS = 500;
@@ -24,10 +24,14 @@ const MAX_UTTERANCE_MS = 30000;
 const BARGE_RMS = 0.09;
 const BARGE_HOLD_MS = 320;
 
+type LoopControls = {
+  /** User tapped "I'm done" — end capture and send now (primary turn end). */
+  finishTurn: () => void;
+};
+
 /**
- * Full-duplex-ish server voice without Silero/ONNX:
- * mic + RMS → capture utterance → faster-whisper. Detects barge-in so the
- * user can cut off the avatar — but ignores soft speaker bleed.
+ * Mic + RMS capture with silence as a *backup* only.
+ * Explicit finishTurn() is the source of truth for "I finished speaking".
  */
 export function useServerVoiceLoop({
   active,
@@ -43,10 +47,12 @@ export function useServerVoiceLoop({
   onAudioRef.current = onAudio;
   const onInterruptRef = useRef(onInterrupt);
   onInterruptRef.current = onInterrupt;
+  const controlsRef = useRef<LoopControls | null>(null);
 
   useEffect(() => {
     if (!active || !enabled) {
       setPhase("idle");
+      controlsRef.current = null;
       return;
     }
 
@@ -81,7 +87,7 @@ export function useServerVoiceLoop({
       mediaRecorder.start(200);
     }
 
-    async function stopRecorder(): Promise<Blob | null> {
+    async function stopRecorder(minBytes: number): Promise<Blob | null> {
       const recorder = mediaRecorder;
       mediaRecorder = null;
       if (!recorder || recorder.state === "inactive") return null;
@@ -95,17 +101,17 @@ export function useServerVoiceLoop({
         }
       });
       chunks = [];
-      // Ignore tiny clips (noise / failed barge) — avoids empty Whisper round-trips.
-      return blob.size > 2400 ? blob : null;
+      return blob.size > minBytes ? blob : null;
     }
 
-    async function finalize() {
+    async function finalize(opts: { manual: boolean }) {
       if (sending || !capturing) return;
       capturing = false;
       sending = true;
       bargeSince = 0;
       setPhase("processing");
-      const blob = await stopRecorder();
+      // Manual Done: accept shorter clips; auto-silence keeps a stricter floor.
+      const blob = await stopRecorder(opts.manual ? 800 : 2400);
       speechStartedAt = 0;
 
       if (blob) {
@@ -121,6 +127,16 @@ export function useServerVoiceLoop({
       sending = false;
       if (!cancelled) setPhase("listening");
     }
+
+    controlsRef.current = {
+      finishTurn: () => {
+        if (sending || cancelled) return;
+        // If user hasn't been auto-detected yet, start a tiny capture window — no.
+        // Only finalize an active capture; otherwise no-op (tap when speaking).
+        if (!capturing) return;
+        void finalize({ manual: true });
+      },
+    };
 
     async function boot() {
       setError(null);
@@ -195,17 +211,18 @@ export function useServerVoiceLoop({
           }
 
           if (capturing && now - speechStartedAt > MAX_UTTERANCE_MS) {
-            void finalize();
+            void finalize({ manual: false });
           }
           return;
         }
 
+        // Silence timeout = convenience backup only (Done button is primary).
         if (
           capturing &&
           now - lastLoudAt > SILENCE_MS &&
           now - speechStartedAt > MIN_SPEECH_MS
         ) {
-          void finalize();
+          void finalize({ manual: false });
         }
       }, 60);
     }
@@ -214,6 +231,7 @@ export function useServerVoiceLoop({
 
     return () => {
       cancelled = true;
+      controlsRef.current = null;
       window.clearInterval(tickId);
       try {
         mediaRecorder?.stop();
@@ -231,5 +249,6 @@ export function useServerVoiceLoop({
     error,
     userSpeaking: phase === "user_speaking",
     listening: phase === "listening" || phase === "user_speaking",
+    finishTurn: () => controlsRef.current?.finishTurn(),
   };
 }
