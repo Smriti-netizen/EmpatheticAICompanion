@@ -39,11 +39,16 @@ async def session_voice(
     )
 
     try:
-        transcript = stt_whisper.transcribe(tmp_path, locale=session_locale)
+        transcript, detected_lang = stt_whisper.transcribe(
+            tmp_path, locale=session_locale
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}") from exc
     finally:
         tmp_path.unlink(missing_ok=True)
+
+    # Session locale wins for reply + TTS. Whisper detection is informational only.
+    turn_locale = session_locale
 
     # Silence / no speech — soft empty turn (HTTP 200). UI stays on "Listening".
     if not transcript:
@@ -57,11 +62,17 @@ async def session_voice(
             "audio_mime": "audio/wav",
             "empty": True,
             "avatar_id": voice_key,
-            "locale": session_locale,
+            "locale": turn_locale,
+            "detected_language": detected_lang,
         }
 
     try:
-        result = await chat_turn(db, session_id, transcript)
+        result = await chat_turn(
+            db,
+            session_id,
+            transcript,
+            detected_language=detected_lang,
+        )
     except SessionServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
@@ -74,5 +85,6 @@ async def session_voice(
         "audio_base64": None,
         "audio_mime": "audio/wav",
         "empty": False,
+        "detected_language": detected_lang,
     }
-    return await attach_tts(payload, result["reply"], voice_key, locale=session_locale)
+    return await attach_tts(payload, result["reply"], voice_key, locale=turn_locale)

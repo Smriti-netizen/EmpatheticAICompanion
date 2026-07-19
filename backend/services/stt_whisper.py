@@ -79,7 +79,8 @@ def _resolve_language(locale: str | None) -> str | None:
     return cfg
 
 
-def transcribe(file_path: Path, locale: str | None = None) -> str:
+def transcribe(file_path: Path, locale: str | None = None) -> tuple[str, str | None]:
+    """Return (transcript, detected_language_code). Language may be None if unknown."""
     if ensure_ready() != "ready" or _model is None:
         raise RuntimeError(
             f"Whisper is not available on this machine. {_last_error or ''}".strip()
@@ -103,6 +104,10 @@ def transcribe(file_path: Path, locale: str | None = None) -> str:
     )
     text = " ".join(segment.text.strip() for segment in segments).strip()
     detected = getattr(info, "language", None)
+    if isinstance(detected, str):
+        detected = detected.strip().lower() or None
+    else:
+        detected = None
     logger.info(
         "Transcribed %.2fs audio in %.2fs → %d chars (lang=%s detected=%s)",
         getattr(info, "duration", 0.0),
@@ -111,4 +116,4 @@ def transcribe(file_path: Path, locale: str | None = None) -> str:
         language or "auto",
         detected,
     )
-    return text
+    return text, detected
