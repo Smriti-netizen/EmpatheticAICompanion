@@ -1,5 +1,3 @@
-"""Session locale helpers — English-only for reply quality (MVP)."""
-
 from __future__ import annotations
 
 # Multilingual reply modes are disabled for now: STT/LLM quality was too uneven.
@@ -12,7 +10,6 @@ LOCALE_LANGUAGE_NAME: dict[str, str] = {
 
 
 def normalize_locale(value: str | None) -> str:
-    """Always English for counselor replies / TTS preference."""
     _ = value
     return "en-IN"
 

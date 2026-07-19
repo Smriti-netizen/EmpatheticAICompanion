@@ -1,5 +1,3 @@
-"""TTS: per-avatar mature edge-tts voices (EN + Indic), Piper fallback."""
-
 from __future__ import annotations
 
 import logging
@@ -11,12 +9,10 @@ from services import tts_piper
 
 logger = logging.getLogger(__name__)
 
-# hop=Milo (calm mature man), aura=Coco (warm mature woman),
-# spark=Ziggy (grounded mature man — distinct timbre from Milo).
-# No cute / high-pitched voices — calm adult pacing throughout.
+# hop=Milo, aura=Coco, spark=Ziggy — mature voices only; Milo ≠ Ziggy timbre.
 _EDGE_VOICES: dict[str, dict[str, dict[str, str]]] = {
     "hop": {
-        # US mature male — deliberately not Indian/British so Milo ≠ Ziggy.
+        # US male — not Indian/British so Milo ≠ Ziggy.
         "en": {"voice": "en-US-AndrewNeural", "rate": "-6%", "pitch": "-3Hz"},
         "en-in": {"voice": "en-US-AndrewNeural", "rate": "-6%", "pitch": "-3Hz"},
         "hi": {"voice": "hi-IN-MadhurNeural", "rate": "-5%", "pitch": "-2Hz"},
@@ -29,7 +25,7 @@ _EDGE_VOICES: dict[str, dict[str, dict[str, str]]] = {
         "ml": {"voice": "ml-IN-MidhunNeural", "rate": "-5%", "pitch": "-2Hz"},
     },
     "aura": {
-        # Coco is always a mature woman — never share male Neural voices with Milo/Ziggy.
+        # Coco: female Neural only — never share male voices with Milo/Ziggy.
         "en": {"voice": "en-US-AriaNeural", "rate": "-4%", "pitch": "+0Hz"},
         "en-in": {"voice": "en-IN-NeerjaNeural", "rate": "-4%", "pitch": "+1Hz"},
         "hi": {"voice": "hi-IN-SwaraNeural", "rate": "-4%", "pitch": "+1Hz"},
@@ -42,10 +38,10 @@ _EDGE_VOICES: dict[str, dict[str, dict[str, str]]] = {
         "ml": {"voice": "ml-IN-SobhanaNeural", "rate": "-4%", "pitch": "+0Hz"},
     },
     "spark": {
-        # Distinct from Milo: British mature male (never share Prabhat with hop).
+        # British male — distinct from Milo; never share Prabhat with hop.
         "en": {"voice": "en-GB-RyanNeural", "rate": "-2%", "pitch": "+0Hz"},
         "en-in": {"voice": "en-GB-RyanNeural", "rate": "-2%", "pitch": "+0Hz"},
-        # Hindi only has Madhur for male — use warmer/faster pacing vs Milo's slow calm.
+        # Hindi male only has Madhur — warmer/faster vs Milo's slow calm.
         "hi": {"voice": "hi-IN-MadhurNeural", "rate": "+4%", "pitch": "+3Hz"},
         "bn": {"voice": "bn-IN-BashkarNeural", "rate": "+3%", "pitch": "+2Hz"},
         "ta": {"voice": "ta-IN-ValluvarNeural", "rate": "+3%", "pitch": "+2Hz"},
@@ -70,15 +66,14 @@ _DEFAULT_VOICES: dict[str, dict[str, str]] = {
     "ml": {"voice": "ml-IN-SobhanaNeural", "rate": "-3%", "pitch": "+0Hz"},
 }
 
-# Script → language key (used when text itself reveals the language).
 _SCRIPT_LANG: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"[\u0900-\u097F]"), "hi"),  # Devanagari (Hindi / Marathi)
-    (re.compile(r"[\u0980-\u09FF]"), "bn"),  # Bengali
-    (re.compile(r"[\u0B80-\u0BFF]"), "ta"),  # Tamil
-    (re.compile(r"[\u0C00-\u0C7F]"), "te"),  # Telugu
-    (re.compile(r"[\u0A80-\u0AFF]"), "gu"),  # Gujarati
-    (re.compile(r"[\u0C80-\u0CFF]"), "kn"),  # Kannada
-    (re.compile(r"[\u0D00-\u0D7F]"), "ml"),  # Malayalam
+    (re.compile(r"[\u0900-\u097F]"), "hi"),
+    (re.compile(r"[\u0980-\u09FF]"), "bn"),
+    (re.compile(r"[\u0B80-\u0BFF]"), "ta"),
+    (re.compile(r"[\u0C00-\u0C7F]"), "te"),
+    (re.compile(r"[\u0A80-\u0AFF]"), "gu"),
+    (re.compile(r"[\u0C80-\u0CFF]"), "kn"),
+    (re.compile(r"[\u0D00-\u0D7F]"), "ml"),
 ]
 
 _SUPPORTED_LANGS = frozenset(_DEFAULT_VOICES) | frozenset({"en", "en-in"})
@@ -163,7 +158,6 @@ def resolve_voice_name(
     voice_key: str | None = None,
     locale: str | None = None,
 ) -> str:
-    """Which edge-tts voice would be used (for API/debug + frontend sync)."""
     lang = _lang_from(text or "", locale)
     return _voice_for(voice_key, lang)["voice"]
 

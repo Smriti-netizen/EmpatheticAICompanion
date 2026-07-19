@@ -1,5 +1,3 @@
-"""End-to-end API flow test for Empathic Companion."""
-
 from __future__ import annotations
 
 import json

@@ -5,16 +5,13 @@ import { getAvatar, type AvatarId, type FaceRig } from "./avatarCatalog";
 interface LiveCatAvatarProps {
   avatarId: AvatarId;
   expression?: string;
-  /** Kept for CallRoom compatibility; mouth overlays removed. */
+  /** CallRoom compat; mouth overlays removed. */
   amplitude?: number;
   speaking?: boolean;
   listening?: boolean;
   greeting?: boolean;
   variant?: "fill" | "circle";
-  /**
-   * Session / Meet tiles must use contain so the full face fits the tile.
-   * Cover zooms and crops ears — only use for intentional bleed crops.
-   */
+  /** Prefer contain in session tiles — cover crops ears. */
   fit?: "cover" | "contain";
   size?: "md" | "lg";
 }
@@ -115,7 +112,6 @@ export function LiveCatAvatar({
     const ring = speaking ? preset.accent : listening ? "#33452F" : "transparent";
     return (
       <div className="absolute inset-0 overflow-hidden" style={{ background: preset.stageBg }}>
-        {/* Soft bg fill behind full face (contain) — especially visible on wide web tiles. */}
         {!cover && (
           <>
             <img

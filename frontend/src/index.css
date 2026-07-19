@@ -4,40 +4,37 @@
 @theme {
   --font-display: "Fraunces", Georgia, serif;
   --font-sans: "Inter", system-ui, sans-serif;
-  /* Calibri instead of robotic monospace for labels / system text. */
+  /* Intentional: Calibri for labels, not monospace. */
   --font-mono: Calibri, Candara, "Segoe UI", sans-serif;
   --font-script: "Instrument Serif", Georgia, serif;
 
-  /* Coco palette, locked, merged from the 3 posters. No 7th color,
-     no pure black, no pure white. */
-  --color-cream: #f5efe3; /* base — matches botanical PNG cream */
+  /* Locked Coco palette from posters — no 7th color, no pure #fff/#000. */
+  --color-cream: #f5efe3; /* matches botanical PNG cream */
   --color-cream-deep: #ede4d2;
-  --color-ink: #2a2420; /* primary text */
-  --color-rose: #9c2f45; /* primary accent, CTAs */
-  --color-rose-deep: #7c2536; /* pressed / hover rose */
-  --color-forest: #33452f; /* secondary accent */
-  --color-dusk: #3e5c8a; /* AI-only: bubbles, timers, tags, glyphs */
-  --color-blush: #ead9ce; /* card fills, soft surfaces */
+  --color-ink: #2a2420;
+  --color-rose: #9c2f45;
+  --color-rose-deep: #7c2536;
+  --color-forest: #33452f;
+  --color-dusk: #3e5c8a; /* AI-only accents */
+  --color-blush: #ead9ce;
 
-  /* Softened near-white / near-black so no pure #fff or #000 appears. */
   --color-white: #fbf7ee;
   --color-black: #2a2420;
 
-  /* Legacy token names remapped onto the locked palette so existing
-     screens stay on-palette until each is fully re-skinned. */
+  /* Legacy tokens remapped onto the locked palette. */
   --color-paper: #f5efe3;
   --color-surface: #fbf7ee;
   --color-muted: #6f665b;
   --color-line: rgba(42, 36, 32, 0.14);
-  --color-accent: #9c2f45; /* primary accent -> rose */
+  --color-accent: #9c2f45;
   --color-accent-soft: #f0e2da;
-  --color-sage: #33452f; /* -> forest */
-  --color-sky: #3e5c8a; /* -> dusk */
-  --color-lavender: #3e5c8a; /* -> dusk */
+  --color-sage: #33452f;
+  --color-sky: #3e5c8a;
+  --color-lavender: #3e5c8a;
   --color-lavender-soft: #ead9ce;
-  --color-sun: #9c2f45; /* -> rose */
+  --color-sun: #9c2f45;
   --color-glow: #ede4d2;
-  --color-charcoal: #1c1815; /* session letterbox */
+  --color-charcoal: #1c1815;
   --color-user: #e7e9e2;
   --color-crisis: #9c2f45;
   --color-crisis-bg: #f0e2da;
@@ -54,7 +51,6 @@ body,
   overflow-x: hidden;
 }
 
-/* Hide scrollbars site-wide (page still scrolls with wheel/trackpad). */
 html {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -76,7 +72,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Soft, warm shadows (never grey UI elevation). */
 .shadow-warm {
   box-shadow: 0 22px 60px -30px rgba(42, 36, 32, 0.28);
 }
@@ -84,25 +79,21 @@ body {
   box-shadow: 0 8px 24px -14px rgba(42, 36, 32, 0.22);
 }
 
-/* Flat cream canvases: the posters use plain backdrops, not gradient washes. */
+/* Poster canvases stay flat cream — no gradient washes. */
 .bloom-wash,
 .bloom-wash-warm {
   background: var(--color-cream);
 }
-/* Blush card / bubble surface. */
 .surface-tinted {
   background: var(--color-blush);
 }
 
-/* Diamond / rhombus bullet: the one recurring icon motif (Poster 1). */
 .diamond {
   display: inline-block;
   transform: rotate(45deg);
   background: var(--color-rose);
 }
 
-/* Fine, even halftone / newsprint dot screen laid over the whole hero
-   (Poster 3), not just the dissolve area. */
 .halftone {
   background-image: radial-gradient(rgba(42, 36, 32, 0.22) 0.7px, transparent 0.8px);
   background-size: 4px 4px;
@@ -316,7 +307,6 @@ body {
   }
 }
 
-/* Soft cross-fade + slight scale-up as each page enters (§5). */
 @keyframes pageIn {
   from {
     opacity: 0;
@@ -328,7 +318,6 @@ body {
   }
 }
 
-/* ASCII-bloom wipe overlay masking the swap between flows (§5). */
 @keyframes bloomWipe {
   0% {
     opacity: 0;
@@ -388,7 +377,6 @@ body {
   }
 }
 
-/* Soft dot-matrix "paper" texture — evokes the ASCII/vintage print look. */
 .dot-grain {
   position: relative;
 }
@@ -407,7 +395,6 @@ body {
   animation: asciiShimmer 3.6s ease-in-out infinite;
 }
 
-/* Vintage double-rule frame used around portrait "plates". */
 .plate-frame {
   box-shadow:
     0 0 0 2px var(--color-surface),

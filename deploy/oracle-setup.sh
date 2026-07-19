@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Oracle A1 bootstrap (P7) — full stack: Ollama, API, Whisper, TTS, nginx
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/opt/empathic-companion}"

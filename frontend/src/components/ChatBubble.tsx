@@ -2,11 +2,9 @@ import type { ChatMessage } from "../shared/types/chat";
 
 interface ChatBubbleProps {
   message: Pick<ChatMessage, "role" | "content">;
-  /** Optional label above assistant bubbles (chat feature). */
   showCounselorLabel?: boolean;
 }
 
-/** Shared chat bubble used by onboarding and freeform chat. */
 export function ChatBubble({ message, showCounselorLabel = false }: ChatBubbleProps) {
   const isUser = message.role === "user";
 

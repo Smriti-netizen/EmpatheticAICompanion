@@ -37,7 +37,6 @@ import {
   looksLikeGibberish,
 } from "./onboardingValidation";
 
-/** Gentle nudges when we can't parse the answer. */
 function clarifyMessage(
   turn: BotTurn,
   kind: "option" | "gibberish",
@@ -90,7 +89,6 @@ function saveFull(p: Persisted) {
   try {
     localStorage.setItem(ONBOARDING_KEY, JSON.stringify(p));
   } catch {
-    // ignore
   }
 }
 
@@ -99,14 +97,9 @@ function clearFull() {
     localStorage.removeItem(ONBOARDING_KEY);
     clearIntakeState();
   } catch {
-    // ignore
   }
 }
 
-/**
- * Single Cerebral Valley–style chat: consent → clinical intake → avatar.
- * Same APIs as before (createUser, saveIntake, saveScreening).
- */
 export function useOnboardingChat() {
   const navigate = useNavigate();
   const booted = useRef(false);
@@ -335,7 +328,6 @@ export function useOnboardingChat() {
       return;
     }
 
-    // —— intake phase ——
     if (intakeTurn.id === "done") {
       await finishIntake(answers);
       return;

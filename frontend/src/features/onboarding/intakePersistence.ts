@@ -42,7 +42,6 @@ export function clearIntakeState(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
-    // ignore
   }
 }
 
@@ -50,7 +49,6 @@ export function newMessageId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/** Map chip label or natural language to the script’s expected value. */
 export function normalizeUserValue(
   turn: BotTurn,
   raw: string,

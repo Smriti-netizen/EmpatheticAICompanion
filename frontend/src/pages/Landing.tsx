@@ -35,7 +35,6 @@ const STEPS = [
   },
 ];
 
-/** Soft cream light behind copy — not a card; feathered edges only. */
 function TextScrim() {
   return (
     <div
@@ -94,12 +93,7 @@ export function LandingPage() {
   return (
     <div className="min-h-[100dvh] overflow-x-hidden bg-cream text-ink">
       <section className="relative overflow-hidden pb-0">
-        {/*
-          Same vintage botanical texture as the original plant art —
-          new layouts (not hard copies). Always object-contain so nothing
-          gets sliced by a hard crop.
-        */}
-        {/* App left — original vine only (do not replace / hard-crop) */}
+        {/* App botanicals: object-contain / object-fill — do not hard-crop. */}
         <img
           src="/landing_left_cut.png?v=21"
           alt=""
@@ -107,10 +101,6 @@ export function LandingPage() {
           className="pointer-events-none absolute top-[7.5rem] left-[-5%] z-0 h-[46%] w-auto max-w-[min(240px,18vw)] select-none object-contain object-left-top sm:left-[-4%] sm:max-w-[min(280px,17vw)] lg:hidden"
           draggable={false}
         />
-        {/*
-          App right: locked strip from under nav → green edge.
-          Fixed height + object-fill so length always spans (not a short floating plant).
-        */}
         <img
           src="/landing_app_right_tallfull.png?v=1"
           alt=""
@@ -119,7 +109,6 @@ export function LandingPage() {
           draggable={false}
         />
 
-        {/* Website left */}
         <img
           src="/landing_botanical_left.png?v=1"
           alt=""
@@ -127,7 +116,6 @@ export function LandingPage() {
           className="pointer-events-none absolute top-[5.5rem] left-[-2%] z-0 hidden h-[min(72%,820px)] w-auto max-w-[clamp(180px,15vw,290px)] select-none object-contain object-left-top lg:block"
           draggable={false}
         />
-        {/* Website mid-right spray */}
         <img
           src="/landing_botanical_midright.png?v=1"
           alt=""
@@ -135,7 +123,6 @@ export function LandingPage() {
           className="pointer-events-none absolute top-[3.5rem] right-[6%] z-[1] hidden h-auto w-[clamp(260px,42vw,620px)] origin-top-right select-none object-contain object-right-top xl:right-[8%] lg:block"
           draggable={false}
         />
-        {/* Website tall right — to green edge */}
         <img
           src="/landing_botanical_right.png?v=1"
           alt=""
@@ -167,12 +154,10 @@ export function LandingPage() {
           </nav>
         </header>
 
-        {/* App hero — tighter under nav; vine fills space beside “untangle” */}
         <div className="relative z-20 mt-3 ml-[clamp(0.75rem,8vw,5rem)] mr-[clamp(4rem,34vw,12rem)] w-auto max-w-[min(28rem,58vw)] pt-0 pb-4 text-left sm:mt-5 sm:ml-[clamp(1.25rem,10vw,7rem)] sm:mr-[clamp(6rem,34vw,14rem)] sm:max-w-[30rem] sm:pb-5 md:mt-6 lg:hidden">
           {heroInner("app")}
         </div>
 
-        {/* Website hero — fluid left column across desktop sizes */}
         <div className="relative z-20 mx-auto mt-10 hidden w-full max-w-[1400px] px-[clamp(2rem,5vw,5rem)] lg:mt-14 lg:block xl:mt-16">
           <div className="relative max-w-[min(38rem,46vw)] pb-8 text-left xl:max-w-[40rem]">
             {heroInner("web")}
@@ -183,7 +168,6 @@ export function LandingPage() {
           id="trust"
           className="relative z-20 mx-auto mt-4 w-full max-w-[1400px] px-4 pt-8 pb-12 text-left sm:mt-6 sm:px-8 sm:pt-12 sm:pb-16 md:px-12 lg:mt-4 lg:px-[clamp(2rem,5vw,5rem)] lg:pt-6 lg:pb-20 lg:pr-[clamp(6rem,22vw,18rem)] max-lg:pr-[min(44vw,12rem)]"
         >
-          {/* App/tablet: stack so Available 24/7 never sits under the vine */}
           <div className="grid gap-8 max-lg:grid-cols-1 lg:grid-cols-3 lg:gap-12">
             {TRUST.map((item) => (
               <div key={item.label} className="min-w-0 max-lg:max-w-[min(20rem,calc(100%-0.5rem))]">

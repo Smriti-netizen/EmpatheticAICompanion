@@ -2,16 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 interface RevealProps {
   children: ReactNode;
-  /** Delay in ms before the reveal transition starts. */
   delay?: number;
   className?: string;
   as?: "div" | "section" | "li" | "p";
 }
 
-/**
- * Fades + lifts its children into view the first time they enter the viewport.
- * Dependency-free (IntersectionObserver) — used for tasteful scroll motion.
- */
 export function Reveal({ children, delay = 0, className = "", as = "div" }: RevealProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [shown, setShown] = useState(false);

@@ -1,4 +1,3 @@
-/** Encode Float32 PCM (Silero VAD output @ 16 kHz) as a WAV Blob for Whisper. */
 export function float32ToWavBlob(samples: Float32Array, sampleRate = 16000): Blob {
   const numChannels = 1;
   const bitsPerSample = 16;

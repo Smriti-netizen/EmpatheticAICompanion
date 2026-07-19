@@ -38,39 +38,32 @@ def main() -> None:
     side_cut = load("landing_side_cut.png")
     pink = load("landing_pink_cut.png")
 
-    # Wide canvas matching a desktop hero
     W, H = 1800, 2400
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
-    # Top-left start: upper third of main plant, large
+    # Layout anchors: TL start → Privacy/untangle → Available 24/7 → green merge
     top = main_cut.crop((0, 0, main_cut.width, int(main_cut.height * 0.42)))
     place(canvas, top, (-20, -40), scale=1.25, rotate=12)
 
-    # Turn near Privacy / untangle: mid blooms shifted right of text column
     mid = main_cut.crop(
         (0, int(main_cut.height * 0.12), main_cut.width, int(main_cut.height * 0.62))
     )
     place(canvas, mid, (820, 220), scale=0.9, rotate=-14)
 
-    # Right stem framing Available 24/7 → green
     place(canvas, side_cut, (1080, 980), scale=1.05, rotate=-6)
 
-    # Lower right merge bloom
     lower = main_cut.crop(
         (0, int(main_cut.height * 0.45), main_cut.width, main_cut.height)
     )
     place(canvas, lower, (1200, 1500), scale=0.75, rotate=8)
 
-    # Flatten to cream for a single background layer option
     bg = Image.new("RGBA", (W, H), (*CREAM, 255))
     bg.alpha_composite(canvas)
     bg.convert("RGB").save(PUB / "landing_path_cream.png", "PNG")
 
-    # Also save transparent path for layering over page cream
     canvas.save(PUB / "landing_path_cut.png", "PNG")
     print("wrote path cream + cut", canvas.size)
 
-    # Left edge vine strip (transparent)
     left_c = Image.new("RGBA", (520, 2000), (0, 0, 0, 0))
     place(left_c, pink, (-40, 20), scale=0.42, rotate=18)
     place(left_c, left_cut, (-10, 280), scale=0.95, rotate=-4)

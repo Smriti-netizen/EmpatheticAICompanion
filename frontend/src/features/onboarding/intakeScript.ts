@@ -1,7 +1,4 @@
-/**
- * Conversational intake script — one turn at a time.
- * Answers map to clinical intake + PHQ-9 / GAD-7 without MCQ forms.
- */
+/** Maps conversational answers to clinical intake + PHQ-9 / GAD-7 (no MCQ forms). */
 
 export type QuickOption = { label: string; value: string };
 

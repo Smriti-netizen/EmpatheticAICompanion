@@ -1,5 +1,3 @@
-"""PHQ-9 / GAD-7 scoring helpers."""
-
 from __future__ import annotations
 
 

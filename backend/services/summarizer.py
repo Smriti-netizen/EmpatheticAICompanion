@@ -1,5 +1,3 @@
-"""End-of-session summarizer via Ollama."""
-
 from __future__ import annotations
 
 import json

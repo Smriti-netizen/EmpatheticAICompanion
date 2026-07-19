@@ -1,7 +1,7 @@
 export type AvatarId = "hop" | "aura" | "spark";
 export type AvatarExpression = "calm" | "attentive" | "concerned" | "warm" | "listening";
 
-/** Face landmarks as % of the square portrait PNG (object-contain / cover-mapped). */
+/** Face landmarks as % of the square portrait PNG. */
 export interface FaceRig {
   leftEye: { x: number; y: number; w: number; h: number };
   rightEye: { x: number; y: number; w: number; h: number };
@@ -18,7 +18,7 @@ export interface AvatarPreset {
   voiceLabel: string;
   accent: string;
   glow: string;
-  /** Matches the PNG backdrop so contain mode fills the tile cleanly. */
+  /** PNG backdrop color for contain-mode tile fill. */
   stageBg: string;
   imageSrc: string;
   face: FaceRig;

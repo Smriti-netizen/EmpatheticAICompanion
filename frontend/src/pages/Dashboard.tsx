@@ -22,7 +22,6 @@ function dateStamp(iso: string): string {
     .toUpperCase();
 }
 
-// A small line-art specimen per entry, so the list reads like a field guide.
 function SpecimenIcon({ index }: { index: number }) {
   const icons = [
     <path

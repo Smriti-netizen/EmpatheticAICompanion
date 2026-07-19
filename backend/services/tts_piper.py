@@ -1,5 +1,3 @@
-"""Piper TTS adapter. Optional until binary + voice model are installed."""
-
 from __future__ import annotations
 
 import logging

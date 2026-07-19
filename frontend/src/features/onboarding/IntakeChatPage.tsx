@@ -6,10 +6,6 @@ import { OptionChips } from "./components/OptionChips";
 import { TypingIndicator } from "./components/TypingIndicator";
 import { useIntakeConversation } from "./useIntakeConversation";
 
-/**
- * Cerebral Valley–style conversational onboarding shell.
- * Questionnaire logic stays in intakeScript; payloads unchanged.
- */
 export function IntakeChatPage() {
   const {
     messages,

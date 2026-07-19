@@ -1,5 +1,3 @@
-"""Ollama HTTP adapter — infrastructure only, no business rules."""
-
 from __future__ import annotations
 
 import logging
@@ -11,22 +9,19 @@ from services.prompts import load_system_prompt
 
 logger = logging.getLogger(__name__)
 
-# Keep in sync with chat_service / session_service retry — do NOT retry here.
-# Callers already retry once on malformed/empty output; a second layer here
-# multiplies wall-clock wait (up to 4 full generations per user turn).
+# Do NOT retry here — callers already retry once; nested retries multiply latency.
 OLLAMA_TIMEOUT_SEC = 60.0
-# Keep weights resident like `ollama run` does in a terminal session.
+# Keep weights resident like interactive `ollama run`.
 OLLAMA_KEEP_ALIVE = "60m"
-# ~8–10 conversational turns (user + assistant messages).
-MAX_CONTEXT_MESSAGES = 20
+MAX_CONTEXT_MESSAGES = 20  # ~8–10 conversational turns
 
 
 class OllamaError(Exception):
-    """Raised when Ollama is unreachable or returns an unexpected payload."""
+    """Ollama unreachable or unexpected payload."""
 
 
 def trim_messages(messages: list[dict], max_n: int = MAX_CONTEXT_MESSAGES) -> list[dict]:
-    """Keep the newest messages and drop a leading orphan assistant turn."""
+    """Keep newest messages; drop a leading orphan assistant turn."""
     trimmed = list(messages[-max_n:])
     while trimmed and trimmed[0].get("role") == "assistant":
         trimmed.pop(0)
@@ -68,15 +63,14 @@ async def chat(
         raise OllamaError("Counselor model is temporarily unavailable.") from exc
 
     content = data.get("message", {}).get("content")
-    # Empty/blank → return "" so callers can retry via looks_malformed.
-    # Do not retry inside this adapter (avoids stacked retries).
+    # Empty → "" so callers retry via looks_malformed (no nested retries here).
     if not isinstance(content, str):
         return ""
     return content.strip()
 
 
 def warm_model() -> bool:
-    """Load the counselor weights into Ollama so the first user turn is not cold."""
+    """Preload counselor weights so the first user turn is not cold."""
     payload = {
         "model": settings.ollama_model,
         "messages": [{"role": "user", "content": "hi"}],

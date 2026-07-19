@@ -1,5 +1,3 @@
-"""Expression hints for the Rive avatar from counselor reply text."""
-
 from __future__ import annotations
 
 import re

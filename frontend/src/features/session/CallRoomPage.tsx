@@ -89,7 +89,6 @@ export function CallRoomPage() {
     finishSpeakingRef.current?.();
   }, [stopVoice]);
 
-  /** Explicit "Stop AI" — cancel playback / thinking and return to listening. */
   const stopAi = useCallback(() => {
     turnAbortRef.current?.abort();
     turnAbortRef.current = null;
@@ -104,7 +103,6 @@ export function CallRoomPage() {
   const playCounselor = useCallback(
     async (text: string, audioBase64?: string | null, audioMime = "audio/mpeg") => {
       const gen = ++playGenRef.current;
-      // Hard stop everything first (this tab + BroadcastChannel to other tabs).
       stopExclusiveAudio(true);
       audioElRef.current = null;
 
@@ -485,7 +483,6 @@ export function CallRoomPage() {
         ? "#5c7a5e"
         : "#8a8071";
 
-  // End-session is its own full page — not squeezed under the Meet tile.
   if (summary) {
     return (
       <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-cream text-ink pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -539,7 +536,6 @@ export function CallRoomPage() {
 
   const captionText = caption || (isListening ? "I'm listening, take your time." : "...");
 
-  // One Meet layout for phone + desktop — same structure, fluid scale.
   return (
     <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#0f0f0f] text-cream pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {needsAudioTap && (
@@ -575,7 +571,6 @@ export function CallRoomPage() {
         </div>
       </header>
 
-      {/* Same Meet tile everywhere; on web it centers as a wide participant card. */}
       <div className="relative mx-[clamp(0.5rem,2vw,1.5rem)] mb-1 flex min-h-0 flex-1 items-stretch justify-center lg:items-center">
         <div
           className="relative h-full w-full min-h-0 overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-white/10 lg:aspect-[16/10] lg:h-full lg:max-h-full lg:w-auto lg:max-w-full"
@@ -626,7 +621,7 @@ export function CallRoomPage() {
           {voiceHint}
         </p>
 
-        {/* Explicit turn controls (Calmi-style): user owns Done + Stop, VAD is backup. */}
+        {/* Done/Stop are primary; VAD silence is backup only. */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           {(speaking || busy) && (
             <button

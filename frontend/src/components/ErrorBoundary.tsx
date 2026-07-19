@@ -8,7 +8,7 @@ interface State {
   error: Error | null;
 }
 
-/** Prevents a silent white screen when a route throws. */
+/** Avoid a silent white screen when a route throws. */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 

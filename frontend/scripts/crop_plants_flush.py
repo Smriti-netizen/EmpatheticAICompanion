@@ -27,9 +27,7 @@ def crop_flush(src_name: str, dst_name: str, pad: int = PAD) -> None:
     r = min(rgb.width, r + pad)
     b = min(rgb.height, b + pad)
     cropped = rgb.crop((l, t, r, b))
-    # ensure exact cream bg
     out = Image.new("RGB", cropped.size, CREAM)
-    # paste only non-cream? keep as-is since already cream elsewhere
     out.paste(cropped, (0, 0))
     out.save(PUB / dst_name, "PNG")
     print(src_name, "->", dst_name, cropped.size, "from bbox", bbox)

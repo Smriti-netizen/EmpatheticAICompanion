@@ -62,7 +62,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** Lightweight freeform chat (non-session). */
 export async function sendChat(messages: ChatMessage[]): Promise<ChatResponse> {
   return request<ChatResponse>("/api/v1/chat", {
     method: "POST",

@@ -1,5 +1,3 @@
-"""Chat orchestration: safety gate → LLM → output filter."""
-
 from schemas.chat import ChatRequest, ChatResponse
 from services.ollama_client import chat as ollama_chat, trim_messages
 from services.safety import (

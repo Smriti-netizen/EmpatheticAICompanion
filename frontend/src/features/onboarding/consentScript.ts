@@ -1,6 +1,3 @@
-/**
- * Consent collected conversationally — same fields as ConsentPage API createUser.
- */
 export type ConsentDraft = {
   displayName: string;
   age: number | null;

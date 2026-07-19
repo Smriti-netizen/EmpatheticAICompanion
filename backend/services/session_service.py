@@ -1,5 +1,3 @@
-"""Session counseling orchestration: safety → memory → LLM → persist."""
-
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -155,9 +153,7 @@ async def chat_turn(
     )
     db.flush()
 
-    # Distress/self-harm no longer hard-stops the session. We log it for the
-    # clinical record, then let the counselor stay present and respond with a
-    # safety-aware, therapist-style approach (guidance injected below).
+    # Log distress for the record; stay in-session (guidance injected below).
     crisis_signal = is_crisis(content)
     if crisis_signal:
         db.add(
@@ -184,17 +180,14 @@ async def chat_turn(
         for m in history
         if m.role in {"user", "assistant"} and m.content != content
     ]
-    # Always end with the current user turn (avoids empty history / flush races).
-    # Cap context so prompt processing time does not grow with session length.
+    # Current user turn last; cap context length for prompt latency.
     turns = trim_messages(
         [*prior, {"role": "user", "content": content}],
         MAX_CONTEXT_MESSAGES,
     )
 
     memory = build_memory_block_for_user(db, session.user_id)
-    # Llama chat templates expect the first non-system turn to be user.
-    # Leading assistant lines that fell outside the trim window are already
-    # dropped by trim_messages; any leftover opening is folded into memory.
+    # Llama expects first non-system turn to be user; fold leftover openings into memory.
     opening_bits: list[str] = []
     while turns and turns[0]["role"] == "assistant":
         opening_bits.append(turns.pop(0)["content"])

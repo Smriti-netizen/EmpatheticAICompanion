@@ -1,4 +1,3 @@
-# P4 — install Whisper + optional Piper voice models (Windows)
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $Backend = Join-Path $Root "backend"

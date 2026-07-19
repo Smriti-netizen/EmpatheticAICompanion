@@ -20,7 +20,6 @@ export function normalizeLocale(_value: string | null | undefined): SessionLocal
   return "en-IN";
 }
 
-/** Human name for LLM language instructions. */
 export const LOCALE_LANGUAGE_NAME: Record<SessionLocale, string> = {
   "en-IN": "English",
 };

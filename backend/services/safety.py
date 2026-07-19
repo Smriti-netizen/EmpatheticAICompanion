@@ -31,8 +31,7 @@ CRISIS_RESPONSE = (
     "You don't have to face this alone."
 )
 
-# Injected into the LLM instead of hard-stopping the session. The counselor
-# stays present and works *with* the person the way a real therapist would.
+# Injected instead of hard-stopping — stay present; guidance for the model.
 CRISIS_CARE_HINT = (
     "[SAFETY — the client just expressed distress, hopelessness, or thoughts of "
     "self-harm/suicide]\n"
@@ -56,8 +55,7 @@ OUTPUT_BLOCK = [
     re.compile(r"\bprescribe\b", re.I),
 ]
 
-# Warm fallbacks when the model produces garbled/unusable output or is down.
-# These must sound like a real counselor turn — never "still thinking".
+# Warm counselor-sounding fallbacks when the model is garbled or down.
 MODEL_GATHER_FALLBACK = (
     "I'm right here with you — what you shared matters. "
     "What feels heaviest about it right now?"
@@ -78,7 +76,7 @@ def crisis_fallback(locale: str | None = None) -> str:
     _ = locale
     return MODEL_CRISIS_FALLBACK
 
-_REPEATED_CHAR = re.compile(r"(.)\1{6,}")  # same char 7+ times in a row
+_REPEATED_CHAR = re.compile(r"(.)\1{6,}")
 _SYMBOL_RUN = re.compile(r"[^\w\s]{5,}", re.UNICODE)  # long run of punctuation/symbols
 # Latin OR Indic scripts (Hindi/Bengali/Tamil/etc.) — pure Hindi must not look "malformed".
 _REAL_WORD = re.compile(
@@ -205,11 +203,7 @@ def grounded_fallback(user_text: str, locale: str | None = None) -> str | None:
 
 
 def looks_malformed(text: str) -> bool:
-    """Basic sanity check on AI output before it's ever shown to the user.
-
-    Flags empty, too-short, symbol-heavy, repetitive junk, or language-meta
-    lectures so the caller can retry once and fall back warmly.
-    """
+    """True for empty/junk/meta replies that must not be shown to the user."""
     if not text:
         return True
     t = text.strip()
@@ -218,7 +212,7 @@ def looks_malformed(text: str) -> bool:
     if len(_REAL_WORD.findall(t)) < 1:
         return True
     letters = sum(c.isalpha() for c in t)
-    if letters / len(t) < 0.4:  # mostly numbers/symbols
+    if letters / len(t) < 0.4:
         return True
     if _REPEATED_CHAR.search(t) or _SYMBOL_RUN.search(t):
         return True
@@ -258,7 +252,6 @@ def humanize_counselor_reply(text: str) -> str:
     cleaned = re.sub(r"\s+([,.!?])", r"\1", cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip(" ,;")
-    # Capitalize first letter if we stripped a leading clause.
     if cleaned and cleaned[0].islower():
         cleaned = cleaned[0].upper() + cleaned[1:]
     return cleaned.strip()
@@ -281,11 +274,7 @@ _INDIC_CHAR = re.compile(
 
 
 def coerce_reply_language(text: str, locale: str | None) -> str:
-    """Remove side-by-side English↔Indic duplicates so TTS speaks one language.
-
-    Small models often emit English then a Hindi 'translation' of the same
-    turn — that sounds like a double voice when read aloud.
-    """
+    """Drop side-by-side English↔Indic duplicates so TTS speaks one language."""
     t = (text or "").strip()
     if not t:
         return t

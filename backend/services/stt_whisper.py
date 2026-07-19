@@ -1,5 +1,3 @@
-"""faster-whisper STT adapter. Optional until models are installed."""
-
 from __future__ import annotations
 
 import logging
@@ -80,7 +78,6 @@ def _resolve_language(locale: str | None) -> str | None:
 
 
 def transcribe(file_path: Path, locale: str | None = None) -> tuple[str, str | None]:
-    """Return (transcript, detected_language_code). Language may be None if unknown."""
     if ensure_ready() != "ready" or _model is None:
         raise RuntimeError(
             f"Whisper is not available on this machine. {_last_error or ''}".strip()

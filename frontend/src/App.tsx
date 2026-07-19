@@ -77,11 +77,7 @@ function prefersReducedMotion() {
   );
 }
 
-/**
- * ASCII-bloom wipe: briefly blooms across the screen on each route change,
- * masking the swap so flows feel connected instead of hard-cutting (§5).
- * Skipped on the heavy /session route and when reduced-motion is set.
- */
+/** Route wipe; skipped on /session and prefers-reduced-motion. */
 function BloomWipe() {
   const location = useLocation();
   const [active, setActive] = useState(false);
@@ -109,7 +105,6 @@ function BloomWipe() {
   );
 }
 
-/** Cross-fades + gently scales the routed page in on each navigation. */
 function RoutedPages() {
   const location = useLocation();
   return (

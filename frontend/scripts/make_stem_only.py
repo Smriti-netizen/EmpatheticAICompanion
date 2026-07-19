@@ -8,15 +8,12 @@ PUB = Path(__file__).resolve().parents[1] / "public"
 
 
 def main() -> None:
-    # Use flush (full petals) — not the holey alpha cut
+    # Flush (full petals), not the holey alpha cut — lower stem/leaves only
     main = Image.open(PUB / "landing_main_flush.png").convert("RGB")
-    # Lower stem/leaves only
     stem = main.crop((0, int(main.height * 0.5), main.width, main.height))
     stem = ImageOps.mirror(stem)
 
-    # Paint exact page cream so it blends
     out = Image.new("RGB", stem.size, CREAM)
-    # keep plant pixels; simple distance key from old cream
     old = (245, 239, 227)
     sp = stem.load()
     op = out.load()

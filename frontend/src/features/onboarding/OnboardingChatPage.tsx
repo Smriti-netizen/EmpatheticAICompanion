@@ -7,10 +7,6 @@ import { OptionChips } from "./components/OptionChips";
 import { TypingIndicator } from "./components/TypingIndicator";
 import { useOnboardingChat } from "./useOnboardingChat";
 
-/**
- * Full onboarding = one continuous chat (consent + clinical intake).
- * No multi-field forms — Cerebral Valley register pattern.
- */
 export function OnboardingChatPage() {
   const {
     messages,
@@ -31,8 +27,7 @@ export function OnboardingChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing, chips]);
 
-  // Approximate "how far along" for the growing-vine progress (a feeling,
-  // not a strict step counter — no job-application progress bar).
+  // Vine progress is approximate — not a strict step counter.
   const answered = messages.filter((m) => m.role === "assistant").length;
   const progress = Math.min(0.97, answered / 26);
 

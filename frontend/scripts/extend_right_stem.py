@@ -20,7 +20,7 @@ def main() -> None:
         Image.Resampling.LANCZOS,
     )
 
-    bloom = bloom_src  # exact reference cluster, unscaled weirdness
+    bloom = bloom_src
 
     W = max(stem.width, bloom.width) + 40
     overlap = int(bloom.height * 0.22)

@@ -16,19 +16,16 @@ def non_cream_mask(im: Image.Image, thresh: int = 38) -> Image.Image:
     rgb = im.convert("RGB")
     cream = Image.new("RGB", rgb.size, CREAM)
     diff = ImageChops.difference(rgb, cream).convert("L")
-    # boost greens/pinks that are close to cream
     return diff.point(lambda p: 255 if p > thresh else 0)
 
 
 def cutout(im: Image.Image, thresh: int = 38) -> Image.Image:
     rgb = im.convert("RGB")
     mask = non_cream_mask(rgb, thresh).filter(ImageFilter.MaxFilter(3))
-    # soften edge slightly
     mask = mask.filter(ImageFilter.GaussianBlur(0.6))
     out = Image.new("RGBA", rgb.size, (0, 0, 0, 0))
     out.paste(rgb, (0, 0))
     out.putalpha(mask)
-    # trim
     bbox = out.getbbox()
     if bbox:
         out = out.crop(bbox)
@@ -75,12 +72,10 @@ def main() -> None:
     W, H = 1600, 2200
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
-    # --- MAIN PATH vine ---
-    # 1) Top-left bud start (from main plant top portion, rotated to spill from TL)
+    # Top-left bud → mid headline → right stem → green merge
     top = main_src.crop((0, 0, main_src.width, int(main_src.height * 0.45)))
     paste(canvas, top, (-40, -80), scale=1.15, rotate=18)
 
-    # 2) Mid flower near untangle / main headline (center-right of upper half)
     mid = main_src.crop(
         (
             int(main_src.width * 0.05),
@@ -91,7 +86,6 @@ def main() -> None:
     )
     paste(canvas, mid, (780, 280), scale=0.95, rotate=-8)
 
-    # 3) Right descending stem framing Available 24/7 zone → green merge
     stem = vine_src.crop(
         (
             int(vine_src.width * 0.15),
@@ -102,7 +96,6 @@ def main() -> None:
     )
     paste(canvas, stem, (980, 900), scale=1.05, rotate=-12)
 
-    # Extra bloom near bottom-right to merge into green
     bloom = side_src.crop(
         (
             int(side_src.width * 0.2),
@@ -118,10 +111,8 @@ def main() -> None:
     main_out.save(main_path, "PNG")
     print("wrote", main_path, main_out.size)
 
-    # --- LEFT EDGE vine: Private → Start Talking, pink flower on left boundary ---
     left_canvas = Image.new("RGBA", (700, 1800), (0, 0, 0, 0))
     paste(left_canvas, left_src, (-30, 200), scale=1.2, rotate=-6)
-    # Extra pink flower hard against left edge (crop main bloom)
     flower = main_src.crop(
         (
             int(main_src.width * 0.15),

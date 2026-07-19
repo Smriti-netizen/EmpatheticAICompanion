@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# P4 — install Whisper + optional Piper (Linux / Oracle)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND="$ROOT/backend"

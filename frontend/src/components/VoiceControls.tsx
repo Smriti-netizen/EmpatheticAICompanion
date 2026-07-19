@@ -4,7 +4,6 @@ import { MicRecorder } from "../lib/audio";
 
 interface VoiceControlsProps {
   disabled?: boolean;
-  /** When false, hold-to-talk uses browser speech (no server Whisper). */
   serverVoiceReady?: boolean;
   onSendText: (content: string) => Promise<void>;
   onSendAudio?: (blob: Blob) => Promise<void>;

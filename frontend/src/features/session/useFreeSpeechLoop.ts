@@ -9,12 +9,8 @@ interface UseFreeSpeechLoopArgs {
 }
 
 /**
- * Turn-based voice like HackerRank Interview AI:
- * Browser SpeechRecognition listens → when the user pauses, Chrome ends the
- * utterance → we send the transcript → counselor replies → listen again.
- *
- * We do NOT use custom RMS silence VAD for turn-taking (that stuck in a
- * listening loop with ambient noise / empty transcripts).
+ * Browser SpeechRecognition turn-taking (pause ends utterance).
+ * Do not use custom RMS silence VAD — it looped on ambient noise.
  */
 export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeechLoopArgs) {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -61,7 +57,6 @@ export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeech
       }
     }
 
-    /** After a final chunk, wait briefly for more speech, then send. */
     function scheduleCommitAfterFinal() {
       clearSilenceCommit();
       silenceCommitTimer = window.setTimeout(() => {
@@ -83,7 +78,6 @@ export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeech
       try {
         recognition?.stop();
       } catch {
-        // ignore
       }
 
       finalTranscript = "";
@@ -97,7 +91,6 @@ export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeech
         }
       }
 
-      // CallRoom usually sets active=false during reply (this effect cleans up).
       processing = false;
       if (!cancelled) {
         setPartial("");
@@ -146,7 +139,6 @@ export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeech
       setPartial(combined);
       if (combined) setPhase("user_speaking");
 
-      // Final segment arrived — commit soon unless more speech continues.
       if (finalTranscript && !interim) {
         scheduleCommitAfterFinal();
       } else {
@@ -160,7 +152,6 @@ export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeech
         setError("Microphone permission denied. Allow mic, or use Type instead.");
         return;
       }
-      // no-speech / aborted / network — restart below via onend
       if (code === "network") {
         setError("Speech recognition network error. Try Type instead, or refresh.");
       }
@@ -169,7 +160,6 @@ export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeech
     recognition.onend = () => {
       if (cancelled) return;
 
-      // Non-continuous: utterance ended (user paused). Send if we have text.
       if (!processing) {
         const text = currentText();
         if (text) {
@@ -206,7 +196,6 @@ export function useFreeSpeechLoop({ active, locale, onUtterance }: UseFreeSpeech
       try {
         recognition?.abort();
       } catch {
-        // ignore
       }
       setPhase("idle");
     };

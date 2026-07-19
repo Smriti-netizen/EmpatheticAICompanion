@@ -4,7 +4,6 @@ interface UserCameraPipProps {
   onToggle: () => void;
 }
 
-/** Google Meet self-view — always bottom-right; scales with the screen. */
 export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProps) {
   return (
     <div className="absolute right-[clamp(0.5rem,1.5vw,0.85rem)] bottom-[clamp(0.5rem,1.5vw,0.85rem)] z-20">

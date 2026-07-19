@@ -1,11 +1,6 @@
 import type { BotTurn } from "./intakeScript";
 
-/**
- * Conservative gibberish detection for free-text intake answers.
- * Goal: catch keyboard-mashing ("ihiuhiuhui", "asdfasdf") WITHOUT flagging
- * real (possibly short, non-English, or misspelled) words. We only call an
- * answer gibberish when NO token in it looks like a plausible word.
- */
+/** Catch keyboard-mashing without flagging short/misspelled/real words. */
 
 function hasRepeatingUnit(s: string): boolean {
   for (let size = 1; size <= 3; size += 1) {
@@ -31,7 +26,6 @@ function isPlausibleWord(word: string): boolean {
   return true;
 }
 
-/** True only when the whole answer reads as nonsense (no plausible word). */
 export function looksLikeGibberish(raw: string): boolean {
   const text = raw.trim().toLowerCase();
   if (text.length < 6) return false; // too short to judge — don't over-flag
@@ -43,12 +37,10 @@ export function looksLikeGibberish(raw: string): boolean {
   return !hasRealWord;
 }
 
-/** Steps where the user must type something meaningful in their own words. */
 export function isFreeWordStep(turn: BotTurn): boolean {
   return turn.id === "concerns" || turn.id === "goal";
 }
 
-/** Steps that require the answer to match one of the offered options. */
 export function needsOptionMatch(turn: BotTurn): boolean {
   return (
     turn.id === "welcome" ||
@@ -68,7 +60,6 @@ export function optionValues(turn: BotTurn): string[] {
   return (turn.options ?? []).map((o) => o.value);
 }
 
-/** True when a typed answer doesn't resolve to any offered option. */
 export function isUnrecognizedOption(turn: BotTurn, normalized: string): boolean {
   if (!needsOptionMatch(turn)) return false;
   return !optionValues(turn).includes(normalized);

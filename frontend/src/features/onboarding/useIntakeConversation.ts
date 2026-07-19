@@ -170,7 +170,7 @@ export function useIntakeConversation() {
           });
         }
       } catch {
-        // still route to crisis
+        /* still route to crisis */
       }
       clearIntakeState();
       navigate("/crisis");
@@ -224,10 +224,6 @@ export function useIntakeConversation() {
     setShowChips(true);
     persist(result.answers, result.turn, nextMessages, nextIndex);
     setBusy(false);
-
-    if (result.turn.id === "done") {
-      // leave chips for "Choose avatar"
-    }
   }
 
   return {

@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-/**
- * Live RMS amplitude (0–1) of a playing HTMLAudioElement — drives mouth-open.
- * Pass state (not only a ref) so React re-attaches when a new reply starts.
- */
+/** RMS amplitude of a playing HTMLAudioElement. Pass state (not only a ref) so React re-attaches per reply. */
 export function useAudioAmplitude(audioEl: HTMLAudioElement | null): number {
   const [amplitude, setAmplitude] = useState(0);
   const rafRef = useRef<number | null>(null);
@@ -22,8 +19,7 @@ export function useAudioAmplitude(audioEl: HTMLAudioElement | null): number {
     try {
       source = ctx.createMediaElementSource(audioEl);
     } catch {
-      // Element already connected from a prior turn — recreate via clone not possible;
-      // fall back to synthetic mouth motion while speaking.
+      // MediaElement already connected — fall back to synthetic mouth motion.
       setAmplitude(0.35);
       return () => {
         void ctx.close();
@@ -58,7 +54,6 @@ export function useAudioAmplitude(audioEl: HTMLAudioElement | null): number {
         source.disconnect();
         analyser.disconnect();
       } catch {
-        // ignore
       }
       void ctx.close();
       setAmplitude(0);

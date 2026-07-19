@@ -1,11 +1,5 @@
 import type { CSSProperties } from "react";
 
-/**
- * Hand-drawn doodle accents — the whimsical, comforting language pulled from
- * the reference set (butterflies, hearts, stars, sparkles, little sprigs).
- * All stroke `currentColor`, so color + placement are set by the caller.
- */
-
 type DoodleProps = {
   className?: string;
   style?: CSSProperties;

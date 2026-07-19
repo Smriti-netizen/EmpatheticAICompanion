@@ -18,9 +18,7 @@ export function CrisisPage() {
     void api.crisisResources().then((data) => {
       setMessage(data.message);
       setHelplines(data.helplines);
-    }).catch(() => {
-      // keep defaults
-    });
+    }).catch(() => {});
   }, []);
 
   return (

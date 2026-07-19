@@ -1,5 +1,3 @@
-"""Build chart memory block for prompt injection."""
-
 from __future__ import annotations
 
 import json
@@ -38,13 +36,6 @@ def build_memory_block(db: Session, user_id: str) -> str:
         lines.append(f"Latest PHQ-9: {latest_phq.score} ({latest_phq.taken_at[:10]})")
     if latest_gad:
         lines.append(f"Latest GAD-7: {latest_gad.score} ({latest_gad.taken_at[:10]})")
-
-    notes = db.scalars(
-        select(SessionNote).order_by(SessionNote.created_at.desc())
-    ).all()
-    # Filter by joining sessions would be better; use notes linked via session user later.
-    # For MVP: look up notes for this user's sessions in the caller when needed.
-    _ = notes
 
     return "\n".join(lines)
 

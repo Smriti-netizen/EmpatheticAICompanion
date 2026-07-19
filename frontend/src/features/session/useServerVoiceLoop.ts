@@ -5,34 +5,26 @@ import { pickMimeType } from "../../lib/audio";
 type Phase = "idle" | "listening" | "user_speaking" | "processing";
 
 interface UseServerVoiceLoopArgs {
-  /** Session live (not summary/starting). Mic stays open the whole time. */
   active: boolean;
   enabled: boolean;
   onAudio: (blob: Blob) => Promise<void>;
-  /** Fired the moment the user starts talking while the avatar is speaking. */
   onInterrupt?: () => void;
-  /** True while the counselor's TTS is playing (for barge-in detection). */
   speakingRef: React.MutableRefObject<boolean>;
 }
 
-/** Normal turn-taking while avatar is quiet (backup — explicit Done wins). */
+/** Silence timeout is backup only — explicit Done wins. */
 const SPEECH_RMS = 0.038;
 const SILENCE_MS = 1100;
 const MIN_SPEECH_MS = 500;
 const MAX_UTTERANCE_MS = 30000;
-/** Barge-in must be louder + sustained so speaker echo doesn't cut TTS. */
+/** Louder + sustained so speaker echo doesn't cut TTS. */
 const BARGE_RMS = 0.09;
 const BARGE_HOLD_MS = 320;
 
 type LoopControls = {
-  /** User tapped "I'm done" — end capture and send now (primary turn end). */
   finishTurn: () => void;
 };
 
-/**
- * Mic + RMS capture with silence as a *backup* only.
- * Explicit finishTurn() is the source of truth for "I finished speaking".
- */
 export function useServerVoiceLoop({
   active,
   enabled,
@@ -110,7 +102,7 @@ export function useServerVoiceLoop({
       sending = true;
       bargeSince = 0;
       setPhase("processing");
-      // Manual Done: accept shorter clips; auto-silence keeps a stricter floor.
+      // Manual Done accepts shorter clips than auto-silence.
       const blob = await stopRecorder(opts.manual ? 800 : 2400);
       speechStartedAt = 0;
 
@@ -130,10 +122,7 @@ export function useServerVoiceLoop({
 
     controlsRef.current = {
       finishTurn: () => {
-        if (sending || cancelled) return;
-        // If user hasn't been auto-detected yet, start a tiny capture window — no.
-        // Only finalize an active capture; otherwise no-op (tap when speaking).
-        if (!capturing) return;
+        if (sending || cancelled || !capturing) return;
         void finalize({ manual: true });
       },
     };
@@ -162,7 +151,6 @@ export function useServerVoiceLoop({
         try {
           await audioCtx.resume();
         } catch {
-          // ignore
         }
       }
       const source = audioCtx.createMediaStreamSource(stream);
@@ -236,7 +224,6 @@ export function useServerVoiceLoop({
       try {
         mediaRecorder?.stop();
       } catch {
-        // ignore
       }
       stream?.getTracks().forEach((t) => t.stop());
       void audioCtx?.close();

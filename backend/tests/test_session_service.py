@@ -1,5 +1,3 @@
-"""Session state machine against a throwaway SQLite DB (no live Ollama)."""
-
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch

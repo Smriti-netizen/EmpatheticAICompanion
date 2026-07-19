@@ -1,5 +1,3 @@
-"""Attach counselor audio to API payloads."""
-
 from __future__ import annotations
 
 import base64

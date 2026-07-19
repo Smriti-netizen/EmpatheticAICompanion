@@ -48,7 +48,6 @@ export function stopExclusiveAudio(broadcast = true): void {
       exclusiveAudio.removeAttribute("src");
       exclusiveAudio.load();
     } catch {
-      // ignore
     }
     exclusiveAudio = null;
   }
@@ -60,7 +59,6 @@ export function stopExclusiveAudio(broadcast = true): void {
     try {
       getAudioBus()?.postMessage({ type: "stop" });
     } catch {
-      // ignore
     }
   }
 }
@@ -76,7 +74,6 @@ export async function playBase64Audio(
   try {
     getAudioBus()?.postMessage({ type: "stop" });
   } catch {
-    // ignore
   }
 
   const bytes = base64ToBytes(audioBase64);
@@ -128,7 +125,7 @@ export async function unlockAudioPlayback(): Promise<void> {
     source.start(0);
     await ctx.close();
   } catch {
-    // Best-effort unlock; playback may still require a tap overlay.
+    /* unlock is best-effort */
   }
 }
 
@@ -441,7 +438,6 @@ export class MicRecorder {
     try {
       this.mediaRecorder?.stop();
     } catch {
-      // ignore
     }
     this.stream?.getTracks().forEach((track) => track.stop());
     this.mediaRecorder = null;
