@@ -1,20 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-import {
-  amplitudeToMouthState,
-  getAvatar,
-  mouthAssetsForExpression,
-  type AvatarExpression,
-  type AvatarId,
-  type AvatarPreset,
-  type FaceRig,
-  type MouthState,
-} from "./avatarCatalog";
+import { getAvatar, type AvatarId, type FaceRig } from "./avatarCatalog";
 
 interface LiveCatAvatarProps {
   avatarId: AvatarId;
-  expression?: AvatarExpression | string;
-  amplitude: number;
+  expression?: string;
+  /** Kept for CallRoom compatibility; mouth overlays removed. */
+  amplitude?: number;
   speaking?: boolean;
   listening?: boolean;
   greeting?: boolean;
@@ -22,22 +14,8 @@ interface LiveCatAvatarProps {
   size?: "md" | "lg";
 }
 
-function asExpression(value: string | undefined): AvatarExpression {
-  if (
-    value === "attentive" ||
-    value === "concerned" ||
-    value === "warm" ||
-    value === "listening"
-  ) {
-    return value;
-  }
-  return "calm";
-}
-
 export function LiveCatAvatar({
   avatarId,
-  expression = "calm",
-  amplitude = 0,
   speaking = false,
   listening = false,
   greeting = false,
@@ -47,8 +25,6 @@ export function LiveCatAvatar({
   const preset = getAvatar(avatarId);
   const [blink, setBlink] = useState(false);
   const [earPulse, setEarPulse] = useState(false);
-  const expr = asExpression(expression);
-  // Fill always covers its tile — CallRoom keeps the tile ~4:3 so face stays full.
   const cover = variant === "fill";
 
   useEffect(() => {
@@ -117,21 +93,15 @@ export function LiveCatAvatar({
     };
   }, [speaking, greeting, avatarId]);
 
-  // Mouth stays shut while listening / not speaking — only ears & eyes animate.
-  const mouthClosed = listening || !speaking;
-  const mouthState: MouthState = mouthClosed
-    ? "closed"
-    : amplitudeToMouthState(amplitude);
-
   const stage = (
     <Portrait
-      preset={preset}
+      src={preset.imageSrc}
+      name={preset.name}
+      face={preset.face}
       cover={cover}
       blink={blink}
       earActive={earPulse}
       earLoop={speaking || greeting}
-      mouthState={mouthState}
-      expression={expr}
     />
   );
 
@@ -203,23 +173,22 @@ function buildCoverMap(
 }
 
 function Portrait({
-  preset,
+  src,
+  name,
+  face,
   cover,
   blink,
   earActive,
   earLoop,
-  mouthState,
-  expression,
 }: {
-  preset: AvatarPreset;
+  src: string;
+  name: string;
+  face: FaceRig;
   cover: boolean;
   blink: boolean;
   earActive: boolean;
   earLoop: boolean;
-  mouthState: MouthState;
-  expression: AvatarExpression;
 }) {
-  const { imageSrc: src, name, face } = preset;
   const wrapRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -237,26 +206,6 @@ function Portrait({
     };
   }, [src]);
 
-  // Preload mouth overlays so amplitude switches don't flash.
-  useEffect(() => {
-    const urls = new Set<string>();
-    for (const set of Object.values(preset.mouthAssets)) {
-      for (const path of Object.values(set)) {
-        if (path) urls.add(path);
-      }
-    }
-    const imgs = [...urls].map((url) => {
-      const img = new Image();
-      img.src = url;
-      return img;
-    });
-    return () => {
-      imgs.forEach((img) => {
-        img.src = "";
-      });
-    };
-  }, [preset]);
-
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -269,7 +218,6 @@ function Portrait({
 
   const cmap = buildCoverMap(natural, box, cover);
   const fit = cover ? "object-cover object-center" : "object-contain object-center";
-  const mouthAssets = mouthAssetsForExpression(preset, expression);
 
   return (
     <div ref={wrapRef} className="absolute inset-0">
@@ -313,79 +261,9 @@ function Portrait({
             cmap={cmap}
             staggerMs={22}
           />
-          <MouthShape
-            mouth={face.mouth}
-            assets={mouthAssets}
-            state={mouthState}
-            cmap={cmap}
-          />
         </>
       )}
     </div>
-  );
-}
-
-function MouthLayer({
-  src,
-  opacity,
-  pos,
-  size,
-}: {
-  src: string;
-  opacity: number;
-  pos: { x: number; y: number };
-  size: { w: number; h: number };
-}) {
-  return (
-    <img
-      src={src}
-      alt=""
-      draggable={false}
-      className="pointer-events-none absolute select-none"
-      style={{
-        left: `${pos.x}%`,
-        top: `${pos.y}%`,
-        width: `${size.w}%`,
-        height: `${size.h}%`,
-        transform: "translate(-50%, -50%)",
-        opacity,
-        transition: "opacity 55ms linear",
-      }}
-      aria-hidden
-    />
-  );
-}
-
-function MouthShape({
-  mouth,
-  assets,
-  state,
-  cmap,
-}: {
-  mouth: FaceRig["mouth"];
-  assets: Record<MouthState, string | null>;
-  state: MouthState;
-  cmap: CoverMap;
-}) {
-  const pos = cmap.map(mouth.x, mouth.y);
-  const size = cmap.mapSize(mouth.w, mouth.h);
-  const closed = assets.closed;
-  const half = assets.half;
-  const open = assets.open;
-
-  // Crossfade closed ↔ half ↔ open. Neutral closed has null → base PNG shows through.
-  const closedOpacity = state === "closed" && closed ? 1 : 0;
-  const halfOpacity = state === "half" ? 1 : state === "open" ? 0.2 : 0;
-  const openOpacity = state === "open" ? 1 : 0;
-
-  return (
-    <>
-      {closed && (
-        <MouthLayer src={closed} opacity={closedOpacity} pos={pos} size={size} />
-      )}
-      {half && <MouthLayer src={half} opacity={halfOpacity} pos={pos} size={size} />}
-      {open && <MouthLayer src={open} opacity={openOpacity} pos={pos} size={size} />}
-    </>
   );
 }
 
