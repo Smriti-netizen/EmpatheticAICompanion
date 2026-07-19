@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Diamond } from "../../components/Diamond";
 import { api, ApiClientError } from "../../shared/api/client";
-import { getAvatarId, getLocale, getUserId, setAvatarId, setLocale } from "../../lib/storage";
-import { SESSION_LOCALES, type SessionLocale } from "../../lib/locales";
+import { getAvatarId, getUserId, setAvatarId, setLocale } from "../../lib/storage";
 import { AVATAR_PRESETS, getAvatar, type AvatarId } from "./avatarCatalog";
 
 function asAvatarId(value: string): AvatarId {
@@ -14,7 +13,6 @@ function asAvatarId(value: string): AvatarId {
 export function AvatarPickerPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<AvatarId>(() => asAvatarId(getAvatarId()));
-  const [locale, setLocaleState] = useState<SessionLocale>(() => getLocale());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -29,9 +27,10 @@ export function AvatarPickerPage() {
     setSaving(true);
     setError(null);
     try {
-      await api.setAvatar(userId, selected, locale);
+      // English-only sessions for reply quality; Hinglish speech still understood.
+      await api.setAvatar(userId, selected, "en-IN");
       setAvatarId(selected);
-      setLocale(locale);
+      setLocale("en-IN");
       navigate("/book");
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Could not save avatar");
@@ -58,8 +57,8 @@ export function AvatarPickerPage() {
           Choose your <span className="font-script font-medium text-rose not-italic">companion.</span>
         </h1>
         <p className="mt-3 max-w-xl text-[14px] leading-[1.6] text-ink/70 sm:text-[15px]">
-          Milo, Coco, and Ziggy each have their own mature voice. Pick a companion and the
-          language you want them to speak in your session.
+          Milo, Coco, and Ziggy each have their own voice. Sessions are in soft English —
+          you can still speak naturally (including Hinglish); your companion answers in English.
         </p>
 
         <div className="mt-10 flex flex-col items-center">
@@ -109,41 +108,6 @@ export function AvatarPickerPage() {
             );
           })}
         </div>
-
-        <section className="mt-12">
-          <div className="mb-3 flex items-center gap-2 font-script text-[15px] font-medium text-rose not-italic">
-            <Diamond size={7} />
-            Session language
-          </div>
-          <p className="mb-4 max-w-xl text-[14px] leading-[1.55] text-ink/65">
-            Pick a preference — Hinglish and mixed speech are welcome. You do not need to speak
-            pure Hindi, Bengali, or English.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {SESSION_LOCALES.map((opt) => {
-              const active = locale === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setLocaleState(opt.id)}
-                  className={`border px-3.5 py-2 text-left transition ${
-                    active
-                      ? "border-rose bg-blush text-ink"
-                      : "border-line bg-transparent text-ink/75 hover:border-rose/40"
-                  }`}
-                >
-                  <span className="block font-display text-[14px] font-normal leading-tight">
-                    {opt.native}
-                  </span>
-                  {opt.native !== opt.label && (
-                    <span className="mt-0.5 block text-[11px] text-ink/45">{opt.label}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
 
         {error && <p className="mt-4 text-[14px] text-rose">{error}</p>}
 
