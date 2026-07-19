@@ -11,6 +11,7 @@ import { getAvatarId, getLocale, setAvatarId } from "../../lib/storage";
 import {
   playBase64Audio,
   speakWithBrowserTts,
+  stopExclusiveAudio,
   unlockAudioPlayback,
 } from "../../lib/audio";
 import type { AvatarExpression, AvatarId } from "../avatar/avatarCatalog";
@@ -61,16 +62,22 @@ export function CallRoomPage() {
   const messagesRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
   const busyRef = useRef(false);
   const endingRef = useRef(false);
+  const turnAbortRef = useRef<AbortController | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
   const speakingRef = useRef(false);
   const finishSpeakingRef = useRef<(() => void) | null>(null);
+  /** Monotonic token — stale playCounselor calls must not start a second voice. */
+  const playGenRef = useRef(0);
+  const playCounselorRef = useRef<
+    (text: string, audioBase64?: string | null, audioMime?: string) => Promise<void>
+  >(async () => {});
+  /** Invalidates in-flight session boot (Strict Mode remount / dep churn). */
+  const bootGenRef = useRef(0);
 
   const stopVoice = useCallback(() => {
-    window.speechSynthesis?.cancel();
-    if (audioElRef.current) {
-      audioElRef.current.pause();
-      audioElRef.current = null;
-    }
+    playGenRef.current += 1;
+    stopExclusiveAudio(true);
+    audioElRef.current = null;
     speakingRef.current = false;
     setSpeaking(false);
   }, []);
@@ -82,8 +89,25 @@ export function CallRoomPage() {
     finishSpeakingRef.current?.();
   }, [stopVoice]);
 
+  /** Explicit "Stop AI" — cancel playback / thinking and return to listening. */
+  const stopAi = useCallback(() => {
+    turnAbortRef.current?.abort();
+    turnAbortRef.current = null;
+    stopVoice();
+    finishSpeakingRef.current?.();
+    busyRef.current = false;
+    setBusy(false);
+    setCaption("");
+    setListenActive(true);
+  }, [stopVoice]);
+
   const playCounselor = useCallback(
-    async (text: string, audioBase64?: string | null, audioMime = "audio/wav") => {
+    async (text: string, audioBase64?: string | null, audioMime = "audio/mpeg") => {
+      const gen = ++playGenRef.current;
+      // Hard stop everything first (this tab + BroadcastChannel to other tabs).
+      stopExclusiveAudio(true);
+      audioElRef.current = null;
+
       setListenActive(false);
       setSpeaking(true);
       speakingRef.current = true;
@@ -94,8 +118,14 @@ export function CallRoomPage() {
       await new Promise<void>((resolve) => {
         let done = false;
         let safetyTimer = 0;
+        const stillCurrent = () => gen === playGenRef.current;
         const finish = () => {
           if (done) return;
+          if (!stillCurrent()) {
+            done = true;
+            resolve();
+            return;
+          }
           const el = audioElRef.current;
           // Don't end the turn while edge-tts is still audible — wait for onended.
           if (el && !el.paused && !el.ended) {
@@ -110,9 +140,9 @@ export function CallRoomPage() {
           resolve();
         };
         finishSpeakingRef.current = () => {
-          // Explicit interrupt (barge-in / stop) always wins.
           if (done) return;
           done = true;
+          stopExclusiveAudio(true);
           if (safetyTimer) window.clearTimeout(safetyTimer);
           finishSpeakingRef.current = null;
           pendingAudioRef.current = null;
@@ -121,13 +151,16 @@ export function CallRoomPage() {
         };
         safetyTimer = window.setTimeout(finish, safetyMs);
 
-        const startBrowser = () => {
-          speakWithBrowserTts(text, finish, { avatarId, locale });
-        };
-
         if (audioBase64) {
-          void playBase64Audio(audioBase64, audioMime, finish)
+          // Server audio only — never also start browser TTS (that was a double-voice path).
+          void playBase64Audio(audioBase64, audioMime, () => {
+            if (stillCurrent()) finish();
+          })
             .then((el) => {
+              if (!stillCurrent()) {
+                el.pause();
+                return;
+              }
               audioElRef.current = el;
               setNeedsAudioTap(false);
               const bumpSafety = () => {
@@ -139,19 +172,27 @@ export function CallRoomPage() {
               else el.onloadedmetadata = bumpSafety;
             })
             .catch((err: unknown) => {
+              if (!stillCurrent()) return;
               const name = err instanceof DOMException ? err.name : "";
+              if (name === "AbortError") {
+                finish();
+                return;
+              }
               if (name === "NotAllowedError") {
                 pendingAudioRef.current = { text, audioBase64, audioMime, finish };
                 setNeedsAudioTap(true);
                 return;
               }
-              startBrowser();
+              // Last resort only when server audio truly failed — exclusive stop first.
+              stopExclusiveAudio(true);
+              speakWithBrowserTts(text, finish, { avatarId, locale });
             });
         } else {
-          startBrowser();
+          speakWithBrowserTts(text, finish, { avatarId, locale });
         }
       });
 
+      if (gen !== playGenRef.current) return;
       audioElRef.current = null;
       speakingRef.current = false;
       setSpeaking(false);
@@ -159,6 +200,8 @@ export function CallRoomPage() {
     },
     [avatarId, locale],
   );
+
+  playCounselorRef.current = playCounselor;
 
   const resumePendingAudio = useCallback(async () => {
     const pending = pendingAudioRef.current;
@@ -188,6 +231,9 @@ export function CallRoomPage() {
     async (text: string) => {
       const trimmed = text.trim();
       if (!id || !trimmed || busyRef.current || summary) return;
+      turnAbortRef.current?.abort();
+      const ac = new AbortController();
+      turnAbortRef.current = ac;
       busyRef.current = true;
       setBusy(true);
       setError(null);
@@ -199,6 +245,7 @@ export function CallRoomPage() {
           avatarId,
           locale,
         });
+        if (ac.signal.aborted) return;
         setRemaining(result.remaining_sec);
         messagesRef.current = [
           ...messagesRef.current,
@@ -207,11 +254,15 @@ export function CallRoomPage() {
         setExpression(result.expression as AvatarExpression);
         await playCounselor(result.reply, result.audio_base64, result.audio_mime);
       } catch (err) {
+        if (ac.signal.aborted) return;
         setError(err instanceof ApiClientError ? err.message : "Counselor unavailable");
         setListenActive(true);
       } finally {
-        busyRef.current = false;
-        setBusy(false);
+        if (turnAbortRef.current === ac) turnAbortRef.current = null;
+        if (!ac.signal.aborted) {
+          busyRef.current = false;
+          setBusy(false);
+        }
       }
     },
     [avatarId, id, locale, playCounselor, summary],
@@ -220,6 +271,9 @@ export function CallRoomPage() {
   const handleAudio = useCallback(
     async (blob: Blob) => {
       if (!id || busyRef.current || summary) return;
+      turnAbortRef.current?.abort();
+      const ac = new AbortController();
+      turnAbortRef.current = ac;
       busyRef.current = true;
       setBusy(true);
       setError(null);
@@ -230,6 +284,7 @@ export function CallRoomPage() {
           avatarId,
           locale,
         });
+        if (ac.signal.aborted) return;
         // Silence / no words — stay on Listening, never show "Could not transcribe".
         if (result.empty || !result.transcript?.trim() || !result.reply?.trim()) {
           setCaption("");
@@ -248,6 +303,7 @@ export function CallRoomPage() {
         setExpression(result.expression as AvatarExpression);
         void playCounselor(result.reply, result.audio_base64, result.audio_mime);
       } catch (err) {
+        if (ac.signal.aborted) return;
         const msg = err instanceof ApiClientError ? err.message : "Counselor unavailable";
         // Treat empty-audio / soft STT failures as keep-listening, not a red error.
         if (
@@ -261,8 +317,11 @@ export function CallRoomPage() {
         setError(msg);
         setListenActive(true);
       } finally {
-        busyRef.current = false;
-        setBusy(false);
+        if (turnAbortRef.current === ac) turnAbortRef.current = null;
+        if (!ac.signal.aborted) {
+          busyRef.current = false;
+          setBusy(false);
+        }
       }
     },
     [avatarId, id, locale, playCounselor, summary],
@@ -305,7 +364,7 @@ export function CallRoomPage() {
 
   useEffect(() => {
     if (!id) return;
-    let cancelled = false;
+    const bootGen = ++bootGenRef.current;
     void (async () => {
       try {
         // Trust the companion shown in the UI (localStorage). Never let a stale
@@ -319,29 +378,50 @@ export function CallRoomPage() {
           avatarId: localAvatar,
           locale: localLocale,
         });
-        if (cancelled) return;
+        // Only the latest boot may speak — kills Strict Mode / double-effect overlap.
+        if (bootGen !== bootGenRef.current) return;
         setRemaining(started.duration_target_sec);
         messagesRef.current = [
           { role: "assistant", content: started.opening_message },
         ];
         setStarting(false);
-        await playCounselor(
+        // One spoken intro per tab session. Do NOT key off already_active alone —
+        // Strict Mode's second /start is already_active and used to skip TTS,
+        // which killed the Calmi-style avatar intro.
+        const playedKey = `empathic.opening_played.${id}`;
+        let alreadyPlayed = false;
+        try {
+          alreadyPlayed = sessionStorage.getItem(playedKey) === "1";
+        } catch {
+          alreadyPlayed = false;
+        }
+        if (alreadyPlayed) {
+          setListenActive(true);
+          return;
+        }
+        await playCounselorRef.current(
           started.opening_message,
           started.audio_base64,
           started.audio_mime,
         );
+        if (bootGen !== bootGenRef.current) return;
+        try {
+          sessionStorage.setItem(playedKey, "1");
+        } catch {
+          /* ignore quota / private mode */
+        }
       } catch (err) {
-        if (!cancelled) {
+        if (bootGen === bootGenRef.current) {
           setError(err instanceof ApiClientError ? err.message : "Could not start");
           setStarting(false);
         }
       }
     })();
     return () => {
-      cancelled = true;
+      bootGenRef.current += 1;
       stopVoice();
     };
-  }, [id, playCounselor, stopVoice]);
+  }, [id, stopVoice]);
 
   useEffect(() => {
     if (starting) return;
@@ -457,30 +537,33 @@ export function CallRoomPage() {
     );
   }
 
+  const captionText = caption || (isListening ? "I'm listening, take your time." : "...");
+
+  // One Meet layout for phone + desktop — same structure, fluid scale.
   return (
-    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#1C1815] text-cream pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#0f0f0f] text-cream pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {needsAudioTap && (
         <button
           type="button"
           onClick={() => void resumePendingAudio()}
-          className="absolute inset-0 z-50 grid place-items-center bg-[#1C1815]/72 px-4 backdrop-blur-[2px] sm:px-6"
+          className="absolute inset-0 z-50 grid place-items-center bg-black/70 px-4 backdrop-blur-[2px]"
         >
-          <span className="max-w-xs border border-cream/25 bg-[#2b2622] px-5 py-4 text-center font-display text-[16px] leading-snug text-cream sm:px-6 sm:py-5 sm:text-[18px]">
+          <span className="max-w-xs border border-cream/25 bg-[#2b2622] px-5 py-4 text-center font-display text-[clamp(15px,2.5vw,18px)] leading-snug text-cream">
             Tap to hear {preset.name}
           </span>
         </button>
       )}
 
-      <header className="flex shrink-0 items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-4">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+      <header className="flex shrink-0 items-center justify-between gap-3 px-[clamp(0.75rem,2.5vw,1.75rem)] py-[clamp(0.55rem,1.4vw,1rem)]">
+        <div className="flex min-w-0 items-center gap-2">
           <span
             className="inline-block h-[7px] w-[7px] shrink-0 rounded-full"
             style={{ background: statusColor, boxShadow: `0 0 10px ${statusColor}` }}
           />
-          <p className="truncate font-mono text-[11px] tracking-[0.04em] text-cream/85 sm:text-[12px]">
+          <p className="truncate font-mono text-[clamp(11px,1.8vw,13px)] tracking-[0.04em] text-cream/85">
             {preset.name}
           </p>
-          <span className="hidden font-mono text-[11px] tracking-[0.05em] text-dusk uppercase sm:inline">
+          <span className="hidden font-mono text-[11px] tracking-[0.05em] text-cream/45 uppercase sm:inline">
             AI companion
           </span>
         </div>
@@ -492,9 +575,12 @@ export function CallRoomPage() {
         </div>
       </header>
 
-      {/* Meet-style stage: one 4:3 tile that scales to any screen. */}
-      <div className="relative mx-2 flex min-h-0 flex-1 items-center justify-center sm:mx-5 md:mx-6">
-        <div className="relative aspect-[4/3] h-full max-h-full w-auto max-w-full overflow-hidden rounded-[8px] border border-cream/12 bg-[#1C1815]">
+      {/* Same Meet tile everywhere; on web it centers as a wide participant card. */}
+      <div className="relative mx-[clamp(0.5rem,2vw,1.5rem)] mb-1 flex min-h-0 flex-1 items-stretch justify-center lg:items-center">
+        <div
+          className="relative h-full w-full min-h-0 overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-white/10 lg:aspect-[16/10] lg:h-full lg:max-h-full lg:w-auto lg:max-w-full"
+          style={{ background: preset.stageBg }}
+        >
           <LiveCatAvatar
             avatarId={avatarId}
             expression={expression}
@@ -502,16 +588,20 @@ export function CallRoomPage() {
             listening={isListening}
             greeting={greeting}
             variant="fill"
+            fit="contain"
           />
-          <FlourishCorners />
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 bg-gradient-to-t from-[#1C1815]/95 via-[#1C1815]/45 to-transparent px-2 pt-12 pb-3 sm:px-4 sm:pt-20 sm:pb-6">
+          <p className="pointer-events-none absolute bottom-[clamp(0.65rem,1.8vw,1rem)] left-[clamp(0.65rem,1.8vw,1rem)] z-10 max-w-[48%] truncate font-sans text-[clamp(10px,1.6vw,12px)] font-medium tracking-[0.04em] text-cream uppercase drop-shadow">
+            {preset.name}
+          </p>
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-[clamp(2.4rem,8vw,3.25rem)] z-10 px-[clamp(0.65rem,1.8vw,1.25rem)] pr-[clamp(5rem,22vw,8.5rem)]">
             {busy ? (
               <AsciiBloom label="Let me gather my thoughts." tone="cream" />
             ) : (
               showCaptions && (
-                <p className="max-w-lg px-1 text-center font-display text-[13px] leading-[1.45] font-light text-cream/92 sm:text-[18px] sm:leading-[1.5]">
-                  {caption || (isListening ? "I'm listening, take your time." : "...")}
+                <p className="max-w-[min(36rem,100%)] break-words text-left font-display text-[clamp(13px,2.2vw,17px)] leading-[1.4] font-light text-cream drop-shadow-[0_1px_6px_rgba(0,0,0,0.8)]">
+                  {captionText}
                 </p>
               )
             )}
@@ -526,17 +616,50 @@ export function CallRoomPage() {
       </div>
 
       {(error || serverLoop.error || speech.error || camera.error) && (
-        <p className="shrink-0 px-3 pt-1.5 text-center font-mono text-[10px] text-rose sm:px-8 sm:pt-2 sm:text-[12px]">
+        <p className="shrink-0 px-4 pt-1.5 text-center font-mono text-[clamp(10px,1.6vw,12px)] text-rose">
           {error || serverLoop.error || speech.error || camera.error}
         </p>
       )}
 
-      <div className="flex shrink-0 flex-col items-center gap-2.5 px-3 py-2.5 sm:gap-4 sm:px-8 sm:py-5">
-        <p className="font-mono text-[10px] tracking-[0.06em] text-cream/50 uppercase sm:text-[11px]">
+      <div className="flex shrink-0 flex-col items-center gap-[clamp(0.4rem,1.2vw,0.85rem)] px-[clamp(0.75rem,2.5vw,2rem)] py-[clamp(0.55rem,1.5vw,1.15rem)]">
+        <p className="font-mono text-[clamp(10px,1.5vw,11px)] tracking-[0.06em] text-cream/50 uppercase">
           {voiceHint}
         </p>
 
-        {!busy && (
+        {/* Explicit turn controls (Calmi-style): user owns Done + Stop, VAD is backup. */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {(speaking || busy) && (
+            <button
+              type="button"
+              onClick={stopAi}
+              className="rounded-full border border-cream/25 bg-[#3a2220] px-5 py-2.5 font-mono text-[clamp(11px,1.6vw,12px)] tracking-[0.06em] text-cream uppercase transition hover:border-rose/50 hover:bg-rose/20"
+            >
+              Stop
+            </button>
+          )}
+          {!speaking && !busy && !summary && !starting && listenActive && (
+            <button
+              type="button"
+              onClick={() => {
+                if (serverVoice) {
+                  if (serverLoop.phase === "user_speaking") {
+                    serverLoop.finishTurn();
+                  } else {
+                    setCaption("I'm listening — speak, then tap I'm done.");
+                  }
+                  return;
+                }
+                if (speech.partial) speech.forceEndTurn();
+                else setCaption("I'm listening — speak, then tap I'm done.");
+              }}
+              className="rounded-full border border-cream/25 bg-[#2b2622] px-5 py-2.5 font-mono text-[clamp(11px,1.6vw,12px)] tracking-[0.06em] text-cream uppercase transition hover:border-cream/45"
+            >
+              I&apos;m done
+            </button>
+          )}
+        </div>
+
+        {!busy && !speaking && (
           <MoodChips
             selected={mood}
             onPick={(label) => {
@@ -546,18 +669,7 @@ export function CallRoomPage() {
           />
         )}
 
-        {!serverVoice && listenActive && !busy && (
-          <button
-            type="button"
-            disabled={!speech.partial}
-            onClick={() => speech.forceEndTurn()}
-            className="border border-cream/20 bg-[#2b2622] px-4 py-2 font-mono text-[10px] tracking-[0.05em] text-cream uppercase transition hover:border-cream/40 disabled:opacity-40 sm:px-6 sm:py-2.5 sm:text-[12px]"
-          >
-            Send what I said
-          </button>
-        )}
-
-        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-[clamp(0.55rem,1.5vw,1rem)]">
           <RoundControl
             label={showCaptions ? "Hide captions" : "Show captions"}
             active={showCaptions}
@@ -565,7 +677,6 @@ export function CallRoomPage() {
           >
             <CaptionIcon />
           </RoundControl>
-
           <RoundControl
             label={showType ? "Hide keyboard" : "Type instead"}
             active={showType}
@@ -573,12 +684,11 @@ export function CallRoomPage() {
           >
             <KeyboardIcon />
           </RoundControl>
-
           <button
             type="button"
             onClick={() => void endCall()}
             aria-label="End session"
-            className="grid h-11 min-w-[6.5rem] place-items-center rounded-full bg-rose px-4 py-2.5 font-mono text-[11px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep active:scale-[0.98] sm:h-12 sm:min-w-[7.5rem] sm:px-7 sm:text-[13px]"
+            className="grid h-[clamp(2.75rem,6vw,3rem)] min-w-[clamp(6.5rem,18vw,7.75rem)] place-items-center rounded-full bg-rose px-5 font-mono text-[clamp(11px,1.7vw,13px)] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep active:scale-[0.98]"
           >
             {ending ? "Ending…" : "End session"}
           </button>
@@ -646,30 +756,6 @@ function MoodChips({
   );
 }
 
-function FlourishCorners() {
-  const corners = [
-    "left-3 top-3",
-    "right-3 top-3 -scale-x-100",
-    "left-3 bottom-3 -scale-y-100",
-    "right-3 bottom-3 -scale-100",
-  ];
-  return (
-    <>
-      {corners.map((pos) => (
-        <svg
-          key={pos}
-          className={`pointer-events-none absolute z-20 ${pos} h-7 w-7 text-rose`}
-          viewBox="0 0 28 28"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path d="M2 12 V2 H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square" />
-        </svg>
-      ))}
-    </>
-  );
-}
-
 function RoundControl({
   children,
   label,
@@ -687,7 +773,7 @@ function RoundControl({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`grid h-12 w-12 place-items-center rounded-full border transition ${
+      className={`grid h-[clamp(2.75rem,6vw,3.15rem)] w-[clamp(2.75rem,6vw,3.15rem)] place-items-center rounded-full border transition ${
         active
           ? "border-dusk bg-dusk text-cream"
           : "border-cream/15 bg-[#332C27] text-cream hover:border-cream/35"
