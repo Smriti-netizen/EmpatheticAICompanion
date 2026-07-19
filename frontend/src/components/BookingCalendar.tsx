@@ -18,7 +18,7 @@ export function BookingCalendar({ slots, loading, onBook }: BookingCalendarProps
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className="grid max-h-[min(55dvh,28rem)] gap-2 overflow-y-auto overscroll-contain pr-0.5 sm:max-h-none sm:grid-cols-2 lg:grid-cols-3">
       {available.map((slot) => {
         const start = new Date(slot.start);
         return (
@@ -26,16 +26,16 @@ export function BookingCalendar({ slots, loading, onBook }: BookingCalendarProps
             key={slot.start}
             type="button"
             onClick={() => onBook(slot.start)}
-            className="rounded-2xl border border-line bg-surface px-4 py-3 text-left transition hover:border-accent hover:bg-accent-soft"
+            className="rounded-2xl border border-line bg-surface px-3 py-3 text-left transition hover:border-accent hover:bg-accent-soft sm:px-4"
           >
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-[13px] font-semibold text-ink sm:text-sm">
               {start.toLocaleDateString(undefined, {
                 weekday: "short",
                 month: "short",
                 day: "numeric",
               })}
             </p>
-            <p className="text-sm text-muted">
+            <p className="text-[13px] text-muted sm:text-sm">
               {start.toLocaleTimeString(undefined, {
                 hour: "2-digit",
                 minute: "2-digit",
