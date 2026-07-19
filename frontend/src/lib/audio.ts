@@ -81,14 +81,15 @@ const PERSONA_VOICE: Record<
   hop: {
     patterns: {
       en: [/Andrew/i, /Guy/i, /en-US.*Male/i, /David/i, /Mark/i],
-      hi: [/Madhur/i, /hi-IN.*Male/i, /hi-IN/i],
-      bn: [/Bashkar/i, /bn-IN/i],
-      ta: [/Valluvar/i, /ta-IN/i],
-      te: [/Mohan/i, /te-IN/i],
-      mr: [/Manohar/i, /mr-IN/i],
-      gu: [/Niranjan/i, /gu-IN/i],
-      kn: [/Gagan/i, /kn-IN/i],
-      ml: [/Midhun/i, /ml-IN/i],
+      // Never bare /hi-IN/ — that also matches female Hindi voices on some OSes.
+      hi: [/Madhur/i, /hi-IN.*Male/i, /Male/i],
+      bn: [/Bashkar/i, /Male/i],
+      ta: [/Valluvar/i, /Male/i],
+      te: [/Mohan/i, /Male/i],
+      mr: [/Manohar/i, /Male/i],
+      gu: [/Niranjan/i, /Male/i],
+      kn: [/Gagan/i, /Male/i],
+      ml: [/Midhun/i, /Male/i],
     },
     rate: 0.88,
     pitch: 0.92,
@@ -111,16 +112,15 @@ const PERSONA_VOICE: Record<
   },
   spark: {
     patterns: {
-      // Prefer Ryan (GB) — must not fall through to Prabhat/Andrew (Milo).
       en: [/Ryan/i, /en-GB/i, /Thomas/i, /Christopher/i, /Brian/i, /Steffan/i],
-      hi: [/Madhur/i, /hi-IN/i],
-      bn: [/Bashkar/i, /bn-IN/i],
-      ta: [/Valluvar/i, /ta-IN/i],
-      te: [/Mohan/i, /te-IN/i],
-      mr: [/Manohar/i, /mr-IN/i],
-      gu: [/Niranjan/i, /gu-IN/i],
-      kn: [/Gagan/i, /kn-IN/i],
-      ml: [/Midhun/i, /ml-IN/i],
+      hi: [/Madhur/i, /hi-IN.*Male/i, /Male/i],
+      bn: [/Bashkar/i, /Male/i],
+      ta: [/Valluvar/i, /Male/i],
+      te: [/Mohan/i, /Male/i],
+      mr: [/Manohar/i, /Male/i],
+      gu: [/Niranjan/i, /Male/i],
+      kn: [/Gagan/i, /Male/i],
+      ml: [/Midhun/i, /Male/i],
     },
     rate: 0.96,
     pitch: 1.0,
@@ -198,9 +198,14 @@ function pickPersonaVoice(
   }
 
   if (wantFemale) {
+    // Hindi female voices are often missing on Windows — never fall through to
+    // the OS default (usually male). Prefer any installed female voice instead.
     return (
       voices.find((v) => FEMALE_VOICE_RE.test(voiceLabel(v))) ??
-      voices.find((v) => /en-IN|en-US/i.test(v.lang) && !MALE_VOICE_RE.test(voiceLabel(v))) ??
+      voices.find(
+        (v) => /en-IN|en-US|en-GB/i.test(v.lang) && !MALE_VOICE_RE.test(voiceLabel(v)),
+      ) ??
+      voices.find((v) => !MALE_VOICE_RE.test(voiceLabel(v))) ??
       null
     );
   }
@@ -214,7 +219,11 @@ function pickPersonaVoice(
       const match = voices.find((v) => pattern.test(voiceLabel(v)) && genderOk(v));
       if (match) return match;
     }
-    return voices.find((v) => MALE_VOICE_RE.test(voiceLabel(v))) ?? null;
+    return (
+      voices.find((v) => MALE_VOICE_RE.test(voiceLabel(v))) ??
+      voices.find((v) => !FEMALE_VOICE_RE.test(voiceLabel(v))) ??
+      null
+    );
   }
 
   return voices.find((v) => v.lang.toLowerCase().startsWith("en")) ?? voices[0] ?? null;
@@ -243,8 +252,20 @@ export function speakWithBrowserTts(
   utterance.rate = persona?.rate ?? 0.9;
   utterance.pitch = persona?.pitch ?? 0.98;
   utterance.volume = 1;
-  utterance.lang = utteranceLang(lang, opts?.locale, opts?.avatarId);
-  const voice = pickPersonaVoice(opts?.avatarId, lang);
+  // If Indic lang has no persona voice installed, speak with English locale tag
+  // but keep the gender-correct voice — avoids OS default male for Hindi.
+  let voice = pickPersonaVoice(opts?.avatarId, lang);
+  let speakLang = utteranceLang(lang, opts?.locale, opts?.avatarId);
+  if (!voice && lang !== "en") {
+    voice = pickPersonaVoice(opts?.avatarId, "en");
+    speakLang =
+      opts?.avatarId === "spark"
+        ? "en-GB"
+        : opts?.avatarId === "aura"
+          ? "en-IN"
+          : "en-US";
+  }
+  utterance.lang = speakLang;
   if (voice) utterance.voice = voice;
   utterance.onend = () => onEnd?.();
   utterance.onerror = () => onEnd?.();
@@ -257,7 +278,8 @@ export function speakWithBrowserTts(
   };
   if (!window.speechSynthesis.getVoices().length) {
     window.speechSynthesis.onvoiceschanged = () => {
-      const late = pickPersonaVoice(opts?.avatarId, lang);
+      let late = pickPersonaVoice(opts?.avatarId, lang);
+      if (!late && lang !== "en") late = pickPersonaVoice(opts?.avatarId, "en");
       if (late) utterance.voice = late;
       window.speechSynthesis.onvoiceschanged = null;
       speakNow();
