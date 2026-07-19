@@ -26,9 +26,10 @@ export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProp
           onClick={onToggle}
           aria-pressed={enabled}
           aria-label={enabled ? "Turn camera off" : "Turn camera on"}
+          title={enabled ? "Turn camera off" : "Turn camera on"}
           className="absolute bottom-1.5 left-1.5 bg-ink/70 px-2 py-0.5 font-mono text-[9px] tracking-[0.05em] text-cream uppercase backdrop-blur sm:bottom-2 sm:left-2 sm:px-2.5 sm:py-1 sm:text-[10px]"
         >
-          {enabled ? "Off" : "On"}
+          {enabled ? "On" : "Off"}
         </button>
       </div>
     </div>
