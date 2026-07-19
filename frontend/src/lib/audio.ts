@@ -19,11 +19,66 @@ function base64ToBytes(audioBase64: string): Uint8Array {
   return bytes;
 }
 
+/** One counselor voice at a time — kills prior HTMLAudio + browser TTS (+ other tabs). */
+let exclusiveAudio: HTMLAudioElement | null = null;
+let exclusiveUrl: string | null = null;
+let exclusiveGen = 0;
+let audioBus: BroadcastChannel | null = null;
+
+function getAudioBus(): BroadcastChannel | null {
+  if (typeof BroadcastChannel === "undefined") return null;
+  if (!audioBus) {
+    audioBus = new BroadcastChannel("eac-counselor-audio");
+    audioBus.onmessage = (event) => {
+      if (event.data?.type === "stop") stopExclusiveAudio(false);
+    };
+  }
+  return audioBus;
+}
+
+/** Stop every counselor playback path. Set broadcast=false when handling a remote stop. */
+export function stopExclusiveAudio(broadcast = true): void {
+  exclusiveGen += 1;
+  if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+  if (exclusiveAudio) {
+    try {
+      exclusiveAudio.onended = null;
+      exclusiveAudio.onerror = null;
+      exclusiveAudio.pause();
+      exclusiveAudio.removeAttribute("src");
+      exclusiveAudio.load();
+    } catch {
+      // ignore
+    }
+    exclusiveAudio = null;
+  }
+  if (exclusiveUrl) {
+    URL.revokeObjectURL(exclusiveUrl);
+    exclusiveUrl = null;
+  }
+  if (broadcast) {
+    try {
+      getAudioBus()?.postMessage({ type: "stop" });
+    } catch {
+      // ignore
+    }
+  }
+}
+
 export async function playBase64Audio(
   audioBase64: string,
   mime = "audio/wav",
   onEnded?: () => void,
 ): Promise<HTMLAudioElement> {
+  // Claim the only playback slot before decoding — prevents stacked voices.
+  stopExclusiveAudio(true);
+  const gen = exclusiveGen;
+  try {
+    getAudioBus()?.postMessage({ type: "stop" });
+  } catch {
+    // ignore
+  }
+
   const bytes = base64ToBytes(audioBase64);
   // Copy into a fresh Uint8Array so BlobPart typing accepts ArrayBuffer (not SharedArrayBuffer).
   const blob = new Blob([new Uint8Array(bytes)], { type: mime });
@@ -33,15 +88,31 @@ export async function playBase64Audio(
   audio.setAttribute("playsinline", "true");
   audio.setAttribute("webkit-playsinline", "true");
   audio.src = url;
-  audio.onended = () => {
-    URL.revokeObjectURL(url);
+
+  const finish = () => {
+    if (gen !== exclusiveGen) return;
+    if (exclusiveUrl === url) {
+      URL.revokeObjectURL(url);
+      exclusiveUrl = null;
+    }
+    if (exclusiveAudio === audio) exclusiveAudio = null;
     onEnded?.();
   };
-  audio.onerror = () => {
+
+  audio.onended = finish;
+  audio.onerror = finish;
+
+  if (gen !== exclusiveGen) {
     URL.revokeObjectURL(url);
-    onEnded?.();
-  };
+    throw new DOMException("Superseded", "AbortError");
+  }
+  exclusiveAudio = audio;
+  exclusiveUrl = url;
   await audio.play();
+  if (gen !== exclusiveGen) {
+    audio.pause();
+    throw new DOMException("Superseded", "AbortError");
+  }
   return audio;
 }
 
@@ -134,12 +205,11 @@ function detectLang(text: string, locale?: string | null): VoiceLang {
       return lang;
     }
   }
+  // Session locale wins for Latin/Hinglish — do not flip Hindi→English voice.
   const loc = (locale || "en-IN").toLowerCase();
   const prefix = loc.split("-")[0] as VoiceLang;
-  if (prefix && prefix !== "en" && SCRIPT_LANG.some(([, l]) => l === prefix)) {
-    // Latin text with Indic locale → speak with English voice patterns
-    return "en";
-  }
+  if (prefix === "en") return "en";
+  if (prefix && SCRIPT_LANG.some(([, l]) => l === prefix)) return prefix;
   return "en";
 }
 
@@ -245,7 +315,8 @@ export function speakWithBrowserTts(
     onEnd?.();
     return null;
   }
-  window.speechSynthesis.cancel();
+  // Never layer browser TTS on top of edge-tts / another tab.
+  stopExclusiveAudio(true);
   const lang = detectLang(text, opts?.locale);
   const persona = opts?.avatarId ? PERSONA_VOICE[opts.avatarId] : null;
   const utterance = new SpeechSynthesisUtterance(humanizeForSpeech(text));
