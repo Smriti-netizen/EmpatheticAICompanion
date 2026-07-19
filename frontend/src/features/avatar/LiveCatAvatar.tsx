@@ -11,6 +11,11 @@ interface LiveCatAvatarProps {
   listening?: boolean;
   greeting?: boolean;
   variant?: "fill" | "circle";
+  /**
+   * Session / Meet tiles must use contain so the full face fits the tile.
+   * Cover zooms and crops ears — only use for intentional bleed crops.
+   */
+  fit?: "cover" | "contain";
   size?: "md" | "lg";
 }
 
@@ -20,12 +25,13 @@ export function LiveCatAvatar({
   listening = false,
   greeting = false,
   variant = "circle",
+  fit = "contain",
   size = "lg",
 }: LiveCatAvatarProps) {
   const preset = getAvatar(avatarId);
   const [blink, setBlink] = useState(false);
   const [earPulse, setEarPulse] = useState(false);
-  const cover = variant === "fill";
+  const cover = fit === "cover";
 
   useEffect(() => {
     const timers: number[] = [];
@@ -108,15 +114,31 @@ export function LiveCatAvatar({
   if (variant === "fill") {
     const ring = speaking ? preset.accent : listening ? "#33452F" : "transparent";
     return (
-      <div className="absolute inset-0 overflow-hidden bg-[#1C1815]">
-        <div className="absolute inset-0">{stage}</div>
+      <div className="absolute inset-0 overflow-hidden" style={{ background: preset.stageBg }}>
+        {/* Soft bg fill behind full face (contain) — especially visible on wide web tiles. */}
+        {!cover && (
+          <>
+            <img
+              src={preset.imageSrc}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover object-center blur-3xl saturate-125 lg:scale-[1.35] lg:blur-[48px]"
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ background: `${preset.stageBg}99` }}
+            />
+          </>
+        )}
+        <div className="absolute inset-0 z-[1]">{stage}</div>
         <div
-          className="pointer-events-none absolute inset-0 transition-shadow duration-500"
+          className="pointer-events-none absolute inset-0 z-[2] transition-shadow duration-500"
           style={{
             boxShadow:
               speaking || listening
                 ? `inset 0 0 100px -28px ${ring}, inset 0 0 0 2px ${ring}33`
-                : "inset 0 0 80px -36px rgba(0,0,0,0.28)",
+                : "inset 0 0 80px -36px rgba(0,0,0,0.22)",
           }}
         />
       </div>

@@ -4,11 +4,11 @@ interface UserCameraPipProps {
   onToggle: () => void;
 }
 
-/** Meet-style self-view — bottom-right on every screen size. */
+/** Google Meet self-view — always bottom-right; scales with the screen. */
 export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProps) {
   return (
-    <div className="absolute right-2 bottom-2 z-20 sm:right-4 sm:bottom-4 md:right-5 md:bottom-5">
-      <div className="relative h-20 w-[7.25rem] overflow-hidden rounded-[4px] border border-cream/20 bg-[#2b2622] sm:h-28 sm:w-40 md:h-32 md:w-44">
+    <div className="absolute right-[clamp(0.5rem,1.5vw,0.85rem)] bottom-[clamp(0.5rem,1.5vw,0.85rem)] z-20">
+      <div className="relative h-[clamp(5.25rem,18vw,8.5rem)] w-[clamp(4rem,14vw,6.75rem)] overflow-hidden rounded-[clamp(10px,1.2vw,14px)] border border-white/15 bg-[#1a3d2e] shadow-lg">
         <video
           ref={videoRef}
           muted
@@ -17,7 +17,7 @@ export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProp
           className={`h-full w-full object-cover ${enabled ? "" : "hidden"}`}
         />
         {!enabled && (
-          <div className="grid h-full place-items-center bg-[#2b2622] px-2 text-center font-mono text-[10px] tracking-[0.05em] text-cream/55 uppercase sm:px-3 sm:text-[11px]">
+          <div className="grid h-full place-items-center bg-[#1a3d2e] px-1.5 text-center font-mono text-[clamp(8px,1.6vw,11px)] tracking-[0.04em] text-cream/60 uppercase">
             Camera off
           </div>
         )}
@@ -27,7 +27,7 @@ export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProp
           aria-pressed={enabled}
           aria-label={enabled ? "Turn camera off" : "Turn camera on"}
           title={enabled ? "Turn camera off" : "Turn camera on"}
-          className="absolute bottom-1.5 left-1.5 bg-ink/70 px-2 py-0.5 font-mono text-[9px] tracking-[0.05em] text-cream uppercase backdrop-blur sm:bottom-2 sm:left-2 sm:px-2.5 sm:py-1 sm:text-[10px]"
+          className="absolute bottom-1 left-1 rounded bg-ink/70 px-1.5 py-0.5 font-mono text-[clamp(8px,1.4vw,10px)] tracking-[0.05em] text-cream uppercase backdrop-blur sm:bottom-1.5 sm:left-1.5 sm:px-2"
         >
           {enabled ? "On" : "Off"}
         </button>
