@@ -41,23 +41,23 @@ export function AvatarPickerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream text-ink">
-      <header className="flex items-center justify-between border-b border-line px-6 py-5 sm:px-10">
-        <div className="flex items-center gap-2.5 font-display text-[19px] font-medium">
-          <Diamond size={12} />
-          Empathic Companion
+    <div className="min-h-[100dvh] bg-cream text-ink">
+      <header className="flex items-center justify-between border-b border-line px-4 py-4 sm:px-8 sm:py-5 lg:px-10">
+        <div className="flex min-w-0 items-center gap-2 font-display text-[16px] font-medium sm:gap-2.5 sm:text-[19px]">
+          <Diamond size={12} className="shrink-0" />
+          <span className="truncate">Empathic Companion</span>
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl px-6 py-12 sm:px-4">
-        <div className="mb-4 flex items-center gap-2 font-script text-[15px] font-medium text-rose not-italic">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12 lg:max-w-4xl lg:px-8">
+        <div className="mb-3 flex items-center gap-2 font-script text-[14px] font-medium text-rose not-italic sm:mb-4 sm:text-[15px]">
           <Diamond size={7} />
           Your companion
         </div>
-        <h1 className="font-display text-[2.25rem] leading-[1.1] font-normal tracking-[-0.01em] text-ink sm:text-[2.75rem]">
+        <h1 className="font-display text-[clamp(1.65rem,6vw,2.75rem)] leading-[1.1] font-normal tracking-[-0.01em] text-ink">
           Choose your <span className="font-script font-medium text-rose not-italic">companion.</span>
         </h1>
-        <p className="mt-3 max-w-xl text-[15px] leading-[1.6] text-ink/70">
+        <p className="mt-3 max-w-xl text-[14px] leading-[1.6] text-ink/70 sm:text-[15px]">
           Milo, Coco, and Ziggy each have their own mature voice. Pick a companion and the
           language you want them to speak in your session.
         </p>
