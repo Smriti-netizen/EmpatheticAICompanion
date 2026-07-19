@@ -42,6 +42,8 @@ export interface SessionStartResponse {
   opening_message: string;
   duration_target_sec: number;
   clinical_context_loaded?: boolean;
+  /** True when /start was called again on an already-live session (no fresh TTS). */
+  already_active?: boolean;
   audio_base64?: string | null;
   audio_mime?: string;
   avatar_id?: string | null;
