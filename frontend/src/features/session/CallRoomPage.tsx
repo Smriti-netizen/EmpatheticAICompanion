@@ -13,7 +13,6 @@ import {
   speakWithBrowserTts,
   unlockAudioPlayback,
 } from "../../lib/audio";
-import { useAudioAmplitude } from "../../hooks/useAudioAmplitude";
 import type { AvatarExpression, AvatarId } from "../avatar/avatarCatalog";
 import { getAvatar } from "../avatar/avatarCatalog";
 import { LiveCatAvatar } from "../avatar/LiveCatAvatar";
@@ -35,6 +34,7 @@ export function CallRoomPage() {
   const [remaining, setRemaining] = useState(2700);
   const [starting, setStarting] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [ending, setEnding] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [listenActive, setListenActive] = useState(false);
   const [caption, setCaption] = useState("");
@@ -60,9 +60,8 @@ export function CallRoomPage() {
   const presence = usePresenceCues(camera.videoRef, camera.enabled && listenActive);
   const messagesRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
   const busyRef = useRef(false);
+  const endingRef = useRef(false);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
-  const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
-  const amplitude = useAudioAmplitude(audioEl);
   const speakingRef = useRef(false);
   const finishSpeakingRef = useRef<(() => void) | null>(null);
 
@@ -72,7 +71,6 @@ export function CallRoomPage() {
       audioElRef.current.pause();
       audioElRef.current = null;
     }
-    setAudioEl(null);
     speakingRef.current = false;
     setSpeaking(false);
   }, []);
@@ -124,7 +122,6 @@ export function CallRoomPage() {
         safetyTimer = window.setTimeout(finish, safetyMs);
 
         const startBrowser = () => {
-          setAudioEl(null);
           speakWithBrowserTts(text, finish, { avatarId, locale });
         };
 
@@ -132,7 +129,6 @@ export function CallRoomPage() {
           void playBase64Audio(audioBase64, audioMime, finish)
             .then((el) => {
               audioElRef.current = el;
-              setAudioEl(el);
               setNeedsAudioTap(false);
               const bumpSafety = () => {
                 if (!Number.isFinite(el.duration) || el.duration <= 0) return;
@@ -157,7 +153,6 @@ export function CallRoomPage() {
       });
 
       audioElRef.current = null;
-      setAudioEl(null);
       speakingRef.current = false;
       setSpeaking(false);
       setListenActive(true);
@@ -181,7 +176,6 @@ export function CallRoomPage() {
           pending.finish,
         );
         audioElRef.current = el;
-        setAudioEl(el);
         return;
       }
     } catch {
@@ -365,19 +359,18 @@ export function CallRoomPage() {
   }, [summary]);
 
   async function endCall() {
-    if (!id) return;
+    if (!id || summary || endingRef.current) return;
+    endingRef.current = true;
     setListenActive(false);
     stopVoice();
-    setBusy(true);
-    busyRef.current = true;
+    setEnding(true);
     try {
       const closed = await api.closeSession(id, 3);
       setSummary({ summary: closed.summary, homework: closed.homework });
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Could not end session");
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
+      endingRef.current = false;
+      setEnding(false);
     }
   }
 
@@ -505,7 +498,6 @@ export function CallRoomPage() {
           <LiveCatAvatar
             avatarId={avatarId}
             expression={expression}
-            amplitude={amplitude}
             speaking={speaking}
             listening={isListening}
             greeting={greeting}
@@ -584,12 +576,11 @@ export function CallRoomPage() {
 
           <button
             type="button"
-            disabled={busy}
             onClick={() => void endCall()}
             aria-label="End session"
-            className="grid h-11 min-w-[6.5rem] place-items-center rounded-full bg-rose px-4 py-2.5 font-mono text-[11px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep disabled:opacity-50 sm:h-12 sm:min-w-[7.5rem] sm:px-7 sm:text-[13px]"
+            className="grid h-11 min-w-[6.5rem] place-items-center rounded-full bg-rose px-4 py-2.5 font-mono text-[11px] tracking-[0.05em] text-cream uppercase transition hover:bg-rose-deep active:scale-[0.98] sm:h-12 sm:min-w-[7.5rem] sm:px-7 sm:text-[13px]"
           >
-            End session
+            {ending ? "Ending…" : "End session"}
           </button>
         </div>
 
