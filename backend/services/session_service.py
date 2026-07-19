@@ -13,13 +13,23 @@ from services import avatar_hints
 from services.ids import new_id, utc_now_iso
 from services.locales import language_instruction, normalize_locale
 from services.memory import build_memory_block_for_user
-from services.ollama_client import OllamaError, chat as ollama_chat
+from services.ollama_client import (
+    MAX_CONTEXT_MESSAGES,
+    OllamaError,
+    chat as ollama_chat,
+    trim_messages,
+)
 from services.safety import (
     CRISIS_CARE_HINT,
-    MODEL_GATHER_FALLBACK,
+    coerce_reply_language,
+    crisis_fallback,
     filter_output,
+    gather_fallback,
+    grounded_fallback,
     is_crisis,
     looks_malformed,
+    looks_ungrounded,
+    looks_wrong_language,
 )
 from services.summarizer import summarize_session
 
@@ -39,7 +49,15 @@ def remaining_seconds(session: CounselingSession, now: datetime | None = None) -
     return max(0, session.duration_target_sec - elapsed)
 
 
-async def start_session(db: Session, session_id: str) -> dict:
+_COMPANION_NAMES = {"hop": "Milo", "aura": "Coco", "spark": "Ziggy"}
+
+
+async def start_session(
+    db: Session,
+    session_id: str,
+    *,
+    avatar_id: str | None = None,
+) -> dict:
     from services.scheduler import can_join
 
     session = db.get(CounselingSession, session_id)
@@ -51,13 +69,47 @@ async def start_session(db: Session, session_id: str) -> dict:
         raise SessionServiceError("Session closed due to crisis", 403)
     if session.scheduled_at and not can_join(session.scheduled_at):
         raise SessionServiceError(
-            "Join window is T-5 to T+15 minutes around the booked start.",
+            "You can join from 5 minutes before your booked time "
+            "until 15 minutes after it. Please come back closer to your slot, "
+            "or book a new one / start a practice session from Home.",
             403,
         )
 
+    # Idempotent: React Strict Mode / effect re-runs must not create a second opening.
+    # TTS is still attached by the router so the surviving mount can speak the intro.
+    if session.status == "active" and session.started_at:
+        first = db.scalars(
+            select(Message)
+            .where(Message.session_id == session.id, Message.role == "assistant")
+            .order_by(Message.created_at.asc(), Message.id.asc())
+        ).first()
+        opening = (
+            first.content
+            if first
+            else await _opening_message(db, session.user_id, avatar_id=avatar_id)
+        )
+        if not first:
+            db.add(
+                Message(
+                    id=new_id(),
+                    session_id=session.id,
+                    role="assistant",
+                    content=opening,
+                    created_at=utc_now_iso(),
+                )
+            )
+            db.commit()
+        return {
+            "session_id": session.id,
+            "opening_message": opening,
+            "duration_target_sec": session.duration_target_sec,
+            "clinical_context_loaded": True,
+            "already_active": True,
+        }
+
     session.status = "active"
     session.started_at = utc_now_iso()
-    opening = await _opening_message(db, session.user_id)
+    opening = await _opening_message(db, session.user_id, avatar_id=avatar_id)
     db.add(
         Message(
             id=new_id(),
@@ -73,10 +125,17 @@ async def start_session(db: Session, session_id: str) -> dict:
         "opening_message": opening,
         "duration_target_sec": session.duration_target_sec,
         "clinical_context_loaded": True,
+        "already_active": False,
     }
 
 
-async def chat_turn(db: Session, session_id: str, content: str) -> dict:
+async def chat_turn(
+    db: Session,
+    session_id: str,
+    content: str,
+    *,
+    detected_language: str | None = None,
+) -> dict:
     session = db.get(CounselingSession, session_id)
     if not session:
         raise SessionServiceError("Session not found", 404)
@@ -111,6 +170,10 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
             )
         )
 
+    # Persist the user turn before the LLM call so a slow/failed model
+    # cannot wipe what they said via rollback.
+    db.commit()
+
     history = db.scalars(
         select(Message)
         .where(Message.session_id == session.id)
@@ -122,10 +185,16 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
         if m.role in {"user", "assistant"} and m.content != content
     ]
     # Always end with the current user turn (avoids empty history / flush races).
-    turns = [*prior, {"role": "user", "content": content}][-20:]
+    # Cap context so prompt processing time does not grow with session length.
+    turns = trim_messages(
+        [*prior, {"role": "user", "content": content}],
+        MAX_CONTEXT_MESSAGES,
+    )
 
     memory = build_memory_block_for_user(db, session.user_id)
     # Llama chat templates expect the first non-system turn to be user.
+    # Leading assistant lines that fell outside the trim window are already
+    # dropped by trim_messages; any leftover opening is folded into memory.
     opening_bits: list[str] = []
     while turns and turns[0]["role"] == "assistant":
         opening_bits.append(turns.pop(0)["content"])
@@ -142,10 +211,20 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
         )
 
     user = db.get(User, session.user_id)
+    # Reply language is LOCKED to the session preference (avatar picker locale).
+    # Whisper may detect en/ur/hi for STT only — never flip Hindi session → English.
     locale = normalize_locale(user.locale if user else None)
+    _ = detected_language  # kept for API/logging; does not choose reply language
 
     system_extra = memory
     system_extra = f"{system_extra}\n\n{language_instruction(locale)}"
+    system_extra = (
+        f"{system_extra}\n\n[THIS TURN — GROUNDING]\n"
+        f"Client just said (exact): {content[:500]}\n"
+        "Your reply MUST reflect this specific content. "
+        "Do not invent a different topic (e.g. do not turn a breakup into "
+        "'a bad year'). Never say 'this is good stuff'."
+    )
     if wrap_hint:
         system_extra = f"{system_extra}\n\n[SESSION TIMER]\n{wrap_hint}"
     if crisis_signal:
@@ -154,12 +233,24 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
     if not turns or turns[-1]["role"] != "user":
         raise SessionServiceError("No user message to respond to", 400)
 
+    def _fallback_reply() -> str:
+        if crisis_signal:
+            return crisis_fallback(locale)
+        return grounded_fallback(content, locale) or gather_fallback(locale)
+
+    def _bad_reply(text: str) -> bool:
+        return (
+            looks_malformed(text)
+            or looks_ungrounded(content, text)
+            or looks_wrong_language(text, locale)
+        )
+
     try:
         reply = await ollama_chat(turns, system_extra=system_extra)
-        # Never surface garbled output. Retry once, then hold with a warm line.
-        if looks_malformed(reply):
+        # Never surface garbled or off-topic invented replies.
+        if _bad_reply(reply):
             reply = await ollama_chat(turns, system_extra=system_extra)
-            if looks_malformed(reply):
+            if _bad_reply(reply):
                 db.add(
                     SafetyEvent(
                         session_id=session.id,
@@ -169,10 +260,19 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
                         created_at=utc_now_iso(),
                     )
                 )
-                reply = MODEL_GATHER_FALLBACK
-    except OllamaError as exc:
-        db.rollback()
-        raise SessionServiceError(str(exc), 503) from exc
+                reply = _fallback_reply()
+    except OllamaError:
+        # Prefer a caring reply over a blank "thinking" / 503 wall.
+        db.add(
+            SafetyEvent(
+                session_id=session.id,
+                user_id=session.user_id,
+                event_type="model_unavailable",
+                trigger_source=content[:500],
+                created_at=utc_now_iso(),
+            )
+        )
+        reply = _fallback_reply()
 
     filtered = filter_output(reply)
     if filtered != reply:
@@ -186,6 +286,8 @@ async def chat_turn(db: Session, session_id: str, content: str) -> dict:
             )
         )
         reply = filtered
+    # Drop English↔Hindi side-by-side dumps (sounds like double / translated voice).
+    reply = coerce_reply_language(reply, locale)
 
     db.add(
         Message(
@@ -253,13 +355,19 @@ async def close_session(db: Session, session_id: str, mood_end: int | None) -> d
     }
 
 
-async def _opening_message(db: Session, user_id: str) -> str:
+async def _opening_message(
+    db: Session,
+    user_id: str,
+    *,
+    avatar_id: str | None = None,
+) -> str:
     from db.models import SessionNote
 
     user = db.get(User, user_id)
     profile = db.get(UserProfile, user_id)
     name = (user.display_name if user and user.display_name else "").strip()
     locale = normalize_locale(user.locale if user else None)
+    companion = _COMPANION_NAMES.get(avatar_id or "")
     goal = profile.session_goal if profile and profile.session_goal else None
 
     session_ids = db.scalars(
@@ -276,49 +384,56 @@ async def _opening_message(db: Session, user_id: str) -> str:
     if last_note:
         snippet = last_note.summary[:180].rstrip(".")
         homework = (last_note.homework or "that small practice").strip()
-        return _localized_return_opening(locale, name, snippet, homework)
+        return _localized_return_opening(locale, name, snippet, homework, companion)
     if goal:
-        return _localized_goal_opening(locale, name, goal)
-    return _localized_fresh_opening(locale, name)
+        return _localized_goal_opening(locale, name, goal, companion)
+    return _localized_fresh_opening(locale, name, companion)
 
 
-def _localized_fresh_opening(locale: str, name: str) -> str:
-    if locale.startswith("hi"):
-        greet = f"नमस्ते {name}, " if name else "नमस्ते, "
+def _localized_fresh_opening(locale: str, name: str, companion: str | None = None) -> str:
+    _ = locale
+    greet = f"Hey {name}, " if name else "Hey, "
+    if companion:
         return (
-            f"{greet}आपका यहाँ होना अच्छा लग रहा है। एक साँस लें — "
-            "जब तैयार हों, तो बताइए अभी दिल पर क्या है?"
+            f"{greet}I'm {companion} — your companion for this chat. "
+            "I'm glad you're here. Whenever you're ready, what's been sitting with you?"
         )
-    greet = f"Hi {name}, " if name else "Hi, "
     return (
-        f"{greet}I'm glad you're here. Take a breath — whenever you're ready, "
+        f"{greet}I'm glad you're here. Whenever you're ready — "
         "what's been sitting with you?"
     )
 
 
-def _localized_goal_opening(locale: str, name: str, goal: str) -> str:
-    if locale.startswith("hi"):
-        greet = f"नमस्ते {name}, " if name else "नमस्ते, "
+def _localized_goal_opening(
+    locale: str,
+    name: str,
+    goal: str,
+    companion: str | None = None,
+) -> str:
+    _ = locale
+    greet = f"Hey {name}, " if name else "Hey, "
+    if companion:
         return (
-            f"{greet}आपके आने की खुशी है। आपने {goal} पर काम करने की बात कही थी — "
-            "आज कहाँ से शुरू करना चाहेंगे?"
+            f"{greet}I'm {companion}. Nice that you made it. "
+            f"You wanted to work on {goal} — where would you like to begin today?"
         )
-    greet = f"Hi {name}, " if name else "Hi, "
     return (
-        f"{greet}I'm really glad you made it. You mentioned wanting to work on {goal} — "
+        f"{greet}nice that you made it. You wanted to work on {goal} — "
         "where would you like to begin today?"
     )
 
 
-def _localized_return_opening(locale: str, name: str, snippet: str, homework: str) -> str:
-    if locale.startswith("hi"):
-        greet = f"नमस्ते {name}, " if name else "नमस्ते, "
-        return (
-            f"{greet}फिर से मिलकर अच्छा लगा। पिछली बार हमने {snippet} की बात की थी। "
-            f"{homework} कैसा रहा?"
-        )
-    greet = f"Hi {name}, " if name else "Hi, "
+def _localized_return_opening(
+    locale: str,
+    name: str,
+    snippet: str,
+    homework: str,
+    companion: str | None = None,
+) -> str:
+    _ = locale
+    greet = f"Hey {name}, " if name else "Hey, "
+    who = f"I'm {companion}. " if companion else ""
     return (
-        f"{greet}good to see you again. Last time we touched on {snippet}. "
+        f"{greet}{who}Good to see you again. Last time we touched on {snippet}. "
         f"How did {homework} go for you?"
     )
