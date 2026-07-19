@@ -4,10 +4,10 @@ interface UserCameraPipProps {
   onToggle: () => void;
 }
 
-/** Zoom-style self-view — top-right on phones so captions stay clear; bottom-right on larger screens. */
+/** Meet-style self-view — bottom-right on every screen size. */
 export function UserCameraPip({ videoRef, enabled, onToggle }: UserCameraPipProps) {
   return (
-    <div className="absolute top-2 right-2 z-20 sm:top-auto sm:right-4 sm:bottom-4 md:right-5 md:bottom-5">
+    <div className="absolute right-2 bottom-2 z-20 sm:right-4 sm:bottom-4 md:right-5 md:bottom-5">
       <div className="relative h-20 w-[7.25rem] overflow-hidden rounded-[4px] border border-cream/20 bg-[#2b2622] sm:h-28 sm:w-40 md:h-32 md:w-44">
         <video
           ref={videoRef}
