@@ -1,58 +1,119 @@
-# Empathic Companion
+# Empathic AI Companion
 
-AI counseling companion in the browser.
+> AI counseling companion in the browser with natural voice conversations.
 
-User journey: onboarding chat → pick an avatar → book or start a session → talk in a call room (voice in, voice out).
+<img width="1917" height="862" alt="Screenshot 2026-07-19 041213" src="https://github.com/user-attachments/assets/aa5e4e76-c4e6-4cef-9b59-c3874db72880" />
 
-## Run locally
+<img width="841" height="590" alt="Screenshot 2026-07-19 054612" src="https://github.com/user-attachments/assets/420c18fb-b7df-4366-89f1-865255b4221d" />
 
-Needs: Node.js, Python 3.11+, [Ollama](https://ollama.com), mic access in the browser.
 
-**One-time**
+---
+
+##  Features
+
+-  Real-time voice conversations
+-  Local AI powered by Ollama
+-  Whisper Speech-to-Text
+-  Piper / Edge-TTS voice output
+-  Avatar selection
+-  Book or start an instant session
+
+---
+
+## 🚀 User Flow
+
+```text
+Onboarding Chat
+      ↓
+Choose Avatar
+      ↓
+Book / Start Session
+      ↓
+Voice Conversation
+```
+
+---
+
+# 🛠 Tech Stack
+
+- React + Vite
+- FastAPI
+- SQLite
+- Ollama
+- Whisper STT
+- Piper / Edge-TTS
+
+---
+
+# 📂 Project Structure
+
+```text
+frontend/      React application
+backend/       FastAPI backend
+models/        Local AI models
+scripts/       Setup scripts
+deploy/        Deployment files
+design/        UI assets & screenshots
+```
+
+---
+
+# ⚙️ Local Setup
+
+### Prerequisites
+
+- Node.js
+- Python 3.11+
+- Ollama
+- Browser microphone permission
+
+### One-time Setup
 
 ```powershell
 .\scripts\setup_voice.ps1
+
 ollama create empathic-counselor -f deploy/Modelfile
 ```
 
-Model download / Piper notes: [`models/README.md`](models/README.md).
+> Model download instructions are available in `models/README.md`.
 
-**API** (terminal 1)
+---
+
+#  Run Backend
 
 ```powershell
 cd backend
+
 .\.venv\Scripts\Activate.ps1
+
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-**Web** (terminal 2)
+---
+
+#  Run Frontend
 
 ```powershell
 cd frontend
+
+npm install
+
 npm run dev
 ```
 
-- App: http://localhost:5173  
-- API docs: http://127.0.0.1:8000/docs  
-- Health: http://127.0.0.1:8000/api/v1/health → expect `whisper: ready`, `tts: ready`
+---
 
-Dashboard → **Start a session now** for an immediate call.
+Expected health response:
 
-After `setup_voice.ps1`, restart uvicorn so Whisper/TTS load.
+```text
+whisper: ready
+tts: ready
+```
 
-## Folders
+If Whisper or TTS isn't ready, rerun `setup_voice.ps1` and restart the FastAPI server.
 
-| Folder | What |
-|--------|------|
-| `frontend/` | React UI |
-| `backend/` | FastAPI + SQLite |
-| `scripts/` | Setup / test helpers |
-| `deploy/` | Server setup files (if you host on a VM) |
-| `models/` | Local model files — see its README |
-| `design/` | HTML design drafts |
+---
 
-More detail on how the app works: [`PROJECT.md`](PROJECT.md).
+# 📖 Documentation
 
-## Stack
-
-React + Vite · FastAPI · Ollama · Whisper STT · Piper or edge-tts 
+See `PROJECT.md` for architecture and implementation details.
