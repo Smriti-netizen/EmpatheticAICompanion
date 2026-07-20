@@ -113,7 +113,3 @@ tts: ready
 If Whisper or TTS isn't ready, rerun `setup_voice.ps1` and restart the FastAPI server.
 
 ---
-
-# 📖 Documentation
-
-See `PROJECT.md` for architecture and implementation details.
