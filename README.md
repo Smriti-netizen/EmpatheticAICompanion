@@ -55,4 +55,4 @@ More detail on how the app works: [`PROJECT.md`](PROJECT.md).
 
 ## Stack
 
-React + Vite · FastAPI · Ollama · Whisper STT · Piper or edge-tts · cat avatars (Milo / Coco / Ziggy)
+React + Vite · FastAPI · Ollama · Whisper STT · Piper or edge-tts 
